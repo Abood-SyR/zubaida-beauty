@@ -181,7 +181,7 @@ export default function CollectionsSection({ groups, isLoading }: CollectionsSec
                         className={`absolute bottom-0 h-20 w-16 rounded-2xl bg-white/95 p-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.25)] border border-white/80 backdrop-blur-md transition-all duration-700 ease-in-out ${baseZ} ${animatingStyle}`}
                         style={{ transformOrigin: 'bottom center' }}
                       >
-                        <div className="relative h-full w-full overflow-hidden rounded-xl bg-pink-50/50">
+                        <div className="relative h-full w-full overflow-hidden rounded-xl bg-white">
                           <Image
                             src={prodImg}
                             alt="product item"

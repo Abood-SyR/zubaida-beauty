@@ -74,7 +74,7 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
       <div className="py-2">
         <div className="flex gap-4 overflow-x-auto px-4 scrollbar-none">
           {[1, 2].map((item) => (
-            <div key={item} className="shimmer h-[150px] w-[min(76vw,360px)] flex-shrink-0 rounded-[28px]" />
+            <div key={item} className="shimmer h-[150px] w-[min(60.8vw,288px)] flex-shrink-0 rounded-[28px] sm:w-[min(76vw,360px)]" />
           ))}
         </div>
       </div>
@@ -150,7 +150,9 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
               key={offerId}
               href={`/offers/${offerId}`}
               className={`offer-organic-card group relative flex h-[150px] flex-none items-center overflow-hidden border border-pink-100 bg-surfaceWhite p-2.5 shadow-[0_8px_24px_rgba(129,44,86,0.12)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(129,44,86,0.18)] ${
-                isCompact ? 'w-[min(58vw,270px)]' : 'w-[min(76vw,360px)]'
+                isCompact
+                  ? 'w-[min(46.4vw,216px)] sm:w-[min(58vw,270px)]'
+                  : 'w-[min(60.8vw,288px)] sm:w-[min(76vw,360px)]'
               }`}
               style={{ clipPath: `url(#${clipId})` }}
             >
@@ -201,7 +203,7 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                             className={`absolute bottom-1 h-20 w-15 rounded-2xl bg-white/95 p-1.5 shadow-[0_6px_16px_rgba(0,0,0,0.15)] border border-pink-200/80 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 ${rotation} ${translate} ${zIdx}`}
                             style={{ transformOrigin: 'bottom center' }}
                           >
-                            <div className="relative h-full w-full overflow-hidden rounded-xl bg-pink-50/50">
+                            <div className="relative h-full w-full overflow-hidden rounded-xl bg-white">
                               <OfferProductImage product={item.product} title={item.isGift ? 'هدية العرض' : title} />
                             </div>
 
