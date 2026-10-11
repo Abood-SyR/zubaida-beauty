@@ -10,6 +10,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-primaryRose: var(--app-primary-rose);
+  --color-lightPinkBg: var(--app-light-pink-bg);
+  --color-surfaceWhite: var(--app-surface-white);
+  --color-softPink: var(--app-soft-pink);
+  --color-deepRose: var(--app-deep-rose);
+  --color-textDark: var(--app-text-dark);
+  --color-textMuted: var(--app-text-muted);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +30,268 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.product-image {
+  object-fit: contain;
+  background-color: #fff;
+}
+
+.main-layout-content {
+  min-width: 0;
+}
+
+body:has(.flutter-bottom-nav) .main-layout-content {
+  padding-bottom: 7rem;
+}
+
+@media (min-width: 768px) {
+  body:has(.flutter-bottom-nav) .main-layout-content {
+    padding-bottom: 0;
+  }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: #fce7f3;
+}
+
+.shimmer::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 75%), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.flutter-bottom-nav {
+  overflow: hidden;
+  border: 1.5px solid rgb(255 255 255 / 30%);
+  border-radius: 35px;
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 8px 20px 2px rgb(0 0 0 / 15%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.flutter-nav-items {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  direction: rtl;
+}
+
+.flutter-nav-drop {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  width: 25%;
+  height: 100%;
+  filter: drop-shadow(0 8px 8px rgb(0 0 0 / 18%));
+  transition: right var(--nav-animation-duration) cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+
+.flutter-nav-drop.moving {
+  animation: nav-drop-bounce var(--nav-animation-duration) cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.flutter-nav-drop svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.flutter-nav-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.flutter-nav-item-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(0);
+  transition:
+    transform 500ms cubic-bezier(.22, 1, .36, 1),
+    font-size 500ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.flutter-nav-item-content.selected {
+  transform: translateY(-4px);
+}
+
+.flutter-nav-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flutter-nav-label {
+  max-width: 100%;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    font-size 500ms cubic-bezier(.22, 1, .36, 1),
+    font-weight 500ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.flutter-nav-item-content.selected .flutter-nav-label {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.flutter-cart-badge {
+  position: absolute;
+  top: -7px;
+  right: -10px;
+  display: flex;
+  min-width: 17px;
+  min-height: 17px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: #f44336;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+@keyframes nav-drop-bounce {
+  0% {
+    transform: scaleX(.78) scaleY(.9);
+  }
+  30% {
+    transform: scaleX(1.16) scaleY(.82);
+  }
+  58% {
+    transform: scaleX(.94) scaleY(1.08);
+  }
+  78% {
+    transform: scaleX(1.03) scaleY(.98);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1);
+  }
+}
+
+.toast-viewport {
+  position: fixed;
+  z-index: 100;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  left: 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast-message {
+  display: flex;
+  width: min(100%, 440px);
+  min-height: 54px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgb(45 21 32 / 22%);
+  animation: toast-enter 220ms ease-out both;
+  pointer-events: auto;
+}
+
+.toast-indicator {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgb(255 255 255 / 75%);
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toast-close {
+  flex: none;
+  padding: 0 2px;
+  color: inherit;
+  font-size: 24px;
+  line-height: 1;
+  opacity: .8;
+  cursor: pointer;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.offer-product-tilt {
+  clip-path: none;
+}
+
+.offer-wave-defs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.offer-detail-image {
+  animation: offer-image-enter 400ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes offer-image-enter {
+  from {
+    opacity: 0;
+    transform: scale(.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offer-detail-image {
+    animation: none;
+  }
 }
