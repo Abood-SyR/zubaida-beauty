@@ -107,10 +107,6 @@ export default function ProductDetailPage() {
     try {
       const result = await favoriteService.toggleFavorite(product.id, product);
       setIsFavorite(result.is_favorite);
-      if (result.syncError) {
-        console.error('Error syncing favorite:', result.syncError);
-        showToast('تم حفظ المفضلة محلياً، وتعذرت مزامنتها مع الحساب', 'error');
-      }
     } catch (error) {
       console.error('Error saving favorite locally:', error);
       showToast('تعذر حفظ المنتج في المفضلة', 'error');

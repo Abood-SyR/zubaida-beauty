@@ -1,27 +1,64 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ApiService } from '@/services/api_client';
 
 const ORDERS_STORAGE_KEY = 'zubaida_my_orders_cache';
-const SYNCED_FLAG_KEY = 'zubaida_orders_synced';
+
+interface Order {
+  id: string | number;
+  status?: string;
+  total_amount: number | string;
+}
+
+const apiService = new ApiService();
+
+function isOrder(value: unknown): value is Order {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const order = value as Record<string, unknown>;
+  return (
+    (typeof order.id === 'string' || typeof order.id === 'number') &&
+    String(order.id).trim().length > 0 &&
+    (typeof order.total_amount === 'number' || typeof order.total_amount === 'string') &&
+    (order.status === undefined || typeof order.status === 'string')
+  );
+}
+
+function isOrderList(value: unknown): value is Order[] {
+  return Array.isArray(value) && value.every(isOrder);
+}
+
+async function getOrdersStorageKey(): Promise<string | null> {
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+  if (!token || !globalThis.crypto?.subtle) return null;
+
+  const digest = await globalThis.crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(token),
+  );
+  const accountKey = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('');
+
+  return `${ORDERS_STORAGE_KEY}:${accountKey}`;
+}
 
 export default function MyOrdersPage() {
-  const apiService = new ApiService();
-  
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // دالة جلب الطلبات من السيرفر وتخزينها محلياً
-  const fetchOrdersFromServer = async (isManualRefresh = false) => {
+  const fetchOrdersFromServer = useCallback(async (
+    isManualRefresh = false,
+    isActive: () => boolean = () => true,
+    showLoading = true,
+  ) => {
     if (isManualRefresh) {
       setIsRefreshing(true);
-    } else {
+    } else if (showLoading) {
       setIsLoading(true);
     }
     setErrorMessage(null);
@@ -31,45 +68,71 @@ export default function MyOrdersPage() {
         queryParameters: { limit: 50, offset: 0 },
       });
 
-      if (response.status === 200) {
-        const fetchedOrders = Array.isArray(response.data) ? response.data : [];
-        setOrders(fetchedOrders);
-
-        // حفظ الطلبات في التخزين المحلي وتوثيق أن المزامنة تمت
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(fetchedOrders));
-          localStorage.setItem(SYNCED_FLAG_KEY, 'true');
-        }
+      if (response.status !== 200 || !isOrderList(response.data)) {
+        throw new Error('تعذر تحميل الطلبات بسبب استجابة غير صالحة من الخادم');
       }
-    } catch (e: any) {
-      setErrorMessage(e?.message || e?.response?.data?.detail || 'فشل تحميل الطلبات، تأكد من تسجيل الدخول');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
 
-  // التحقق من التخزين المحلي عند فتح الصفحة أو التبويب
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+      if (!isActive()) return;
 
-    const isSynced = localStorage.getItem(SYNCED_FLAG_KEY);
-    const cachedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
-
-    if (isSynced && cachedOrders) {
+      setOrders(response.data);
       try {
-        const parsed = JSON.parse(cachedOrders);
-        setOrders(Array.isArray(parsed) ? parsed : []);
-        setIsLoading(false); // تم الاعتماد على التخزين المحلي ولن يتم إرسال أي طلب للسيرفر
-      } catch (e) {
-        console.error(e);
-        fetchOrdersFromServer(false);
+        const storageKey = await getOrdersStorageKey();
+        if (storageKey) {
+          localStorage.setItem(storageKey, JSON.stringify(response.data));
+        }
+      } catch (storageError) {
+        console.error('تعذر حفظ الطلبات مؤقتاً:', storageError);
       }
-    } else {
-      // إذا لم تتم المزامنة من قبل، نقوم بالطلب الأول من السيرفر
-      fetchOrdersFromServer(false);
+    } catch (error) {
+      if (isActive()) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'فشل تحميل الطلبات، تأكد من تسجيل الدخول',
+        );
+      }
+    } finally {
+      if (isActive()) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadOrders = async () => {
+      let hasCachedOrders = false;
+      try {
+        const storageKey = await getOrdersStorageKey();
+        if (!isActive) return;
+
+        const cachedOrders = storageKey ? localStorage.getItem(storageKey) : null;
+
+        if (cachedOrders) {
+          const parsedOrders: unknown = JSON.parse(cachedOrders);
+          if (isOrderList(parsedOrders)) {
+            setOrders(parsedOrders);
+            hasCachedOrders = true;
+            setIsLoading(false);
+          } else if (storageKey) {
+            localStorage.removeItem(storageKey);
+          }
+        }
+      } catch (storageError) {
+        console.error('تعذر قراءة الطلبات المحفوظة:', storageError);
+      }
+
+      if (!isActive) return;
+      await fetchOrdersFromServer(false, () => isActive, !hasCachedOrders);
+    };
+
+    void loadOrders();
+    return () => {
+      isActive = false;
+    };
+  }, [fetchOrdersFromServer]);
 
   const translateStatus = (status?: string) => {
     switch (status) {
@@ -144,14 +207,19 @@ export default function MyOrdersPage() {
           </div>
         ) : (
           <div className="space-y-3">
+            {errorMessage && (
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
+                تعذر تحديث الطلبات. يتم عرض آخر بيانات محفوظة.
+              </p>
+            )}
             {orders.map((order) => {
-              const orderId = order['id']?.toString() || '';
+              const orderId = String(order.id);
               const shortId = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
 
               return (
                 <Link
                   key={orderId}
-                  href={`/orders/${orderId}`}
+                  href={`/orders/${encodeURIComponent(orderId)}`}
                   className="block bg-surfaceWhite rounded-3xl p-5 border border-pink-100 shadow-sm hover:shadow-md transition space-y-4"
                 >
                   <div className="flex items-center justify-between">

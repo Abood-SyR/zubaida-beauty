@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FavoriteService } from '@/services/favorite_service';
 
 const favoriteService = new FavoriteService();
@@ -48,12 +49,8 @@ export default function FavoritesPage() {
 
   const handleToggleFavorite = async (productId: string) => {
     try {
-      const result = await favoriteService.toggleFavorite(productId);
+      await favoriteService.toggleFavorite(productId);
       setFavorites((current) => current.filter((item) => String(item.id) !== productId));
-      if (result.syncError) {
-        console.error('Error syncing favorites:', result.syncError);
-        setSyncMessage('تم تحديث المفضلة محلياً، وتعذرت مزامنتها مع الحساب.');
-      }
     } catch (error) {
       console.error('Error removing favorite:', error);
       setSyncMessage('تعذر تحديث المفضلة المحفوظة على هذا الجهاز.');
@@ -104,9 +101,16 @@ export default function FavoritesPage() {
                   className="bg-surfaceWhite rounded-2xl p-4 border border-pink-100 shadow-sm flex items-center justify-between gap-4"
                 >
                   <Link href={`/product/${productId}`} className="flex items-center gap-4 flex-1">
-                    <div className="w-16 h-16 bg-white rounded-xl overflow-hidden flex-shrink-0">
+                    <div className="relative w-16 h-16 bg-white rounded-xl overflow-hidden flex-shrink-0">
                       {imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http') ? (
-                        <img src={imageUrl} alt={productName} className="product-image w-full h-full" />
+                        <Image
+                          src={imageUrl}
+                          alt={productName}
+                          fill
+                          sizes="64px"
+                          unoptimized
+                          className="product-image"
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">صورة</div>
                       )}
@@ -120,6 +124,7 @@ export default function FavoritesPage() {
                   <button
                     onClick={() => handleToggleFavorite(productId)}
                     className="p-2 text-primaryRose hover:scale-110 transition"
+                    aria-label="إزالة من المفضلة"
                   >
                     ❤️
                   </button>

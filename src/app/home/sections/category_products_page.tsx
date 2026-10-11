@@ -83,10 +83,6 @@ export default function CategoryProductsPage({
         ...prev,
         [productId]: result.is_favorite,
       }));
-      if (result.syncError) {
-        console.error('Error syncing favorites:', result.syncError);
-        showToast('تم حفظ المفضلة محلياً، وتعذرت مزامنتها مع الحساب', 'error');
-      }
     } catch (error) {
       console.error('Error saving favorite locally:', error);
       showToast('تعذر حفظ المنتج في المفضلة', 'error');

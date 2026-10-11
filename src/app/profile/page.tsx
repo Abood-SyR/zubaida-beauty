@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast_provider';
 import { ApiService } from '@/services/api_client';
 
@@ -14,50 +15,53 @@ import NotificationsTab from '@/components/profile/NotificationsTab';
 const CACHE_KEY = 'zubaida_profile_cache_data';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const showToast = useToast();
-  const apiService = new ApiService();
+  const apiService = useMemo(() => new ApiService(), []);
 
   const [userData, setUserData] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  
+
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'notifications'>('profile');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    let isMounted = true;
 
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const loadProfile = async () => {
+      if (typeof window === 'undefined') return;
 
-    if (!token) {
-      setIsLoading(false);
-      showToast('يرجى تسجيل الدخول لعرض الملف الشخصي', 'error');
-      return;
-    }
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
 
-    // محاولة قراءة البيانات من الكاش المحلي
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed.userData) {
-          setUserData(parsed.userData);
-          setOrders(parsed.orders || []);
-          setNotifications(parsed.notifications || []);
+      if (!token) {
+        if (isMounted) {
           setIsLoading(false);
-          return; // التوقف وعدم إرسال أي طلب للسيرفر طالما البيانات موجودة محلياً
         }
-      } catch (e) {
-        console.error(e);
+        showToast('يرجى تسجيل الدخول لعرض الملف الشخصي', 'error');
+        return;
       }
-    }
 
-    // إذا لم تكن البيانات موجودة محلياً فقط، يتم جلبها من السيرفر لمرة واحدة
-    const fetchUserData = async () => {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.userData && isMounted) {
+            setUserData(parsed.userData);
+            setOrders(parsed.orders || []);
+            setNotifications(parsed.notifications || []);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       try {
         const profileRes = await apiService.client.get('/auth/me');
 
-        if (profileRes && profileRes.status === 200) {
+        if (profileRes?.status === 200 && isMounted) {
           const freshUser = profileRes.data;
           setUserData(freshUser);
 
@@ -71,21 +75,41 @@ export default function ProfilePage() {
           );
         }
       } catch (e: any) {
-        showToast(e?.message || 'حدث خطأ أثناء تحميل البيانات', 'error');
+        if (isMounted) {
+          showToast(e?.message || 'حدث خطأ أثناء تحميل البيانات', 'error');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchUserData();
-  }, []);
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiService, showToast]);
+
+  const handleProfileUpdate = (updatedUser: any) => {
+    setUserData(updatedUser);
+    if (typeof window !== 'undefined') {
+      const snapshot = {
+        userData: updatedUser,
+        orders,
+        notifications,
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot));
+    }
+  };
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('token');
       localStorage.removeItem(CACHE_KEY);
-      window.location.href = '/auth/login';
+      router.push('/auth/login');
     }
   };
 
@@ -190,8 +214,8 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {activeTab === 'profile' && <ProfileTab userData={userData} />}
-        {activeTab === 'orders' && <OrdersTab orders={orders} />}
+        {activeTab === 'profile' && <ProfileTab userData={userData} onUpdate={handleProfileUpdate} />}
+        {activeTab === 'orders' && <OrdersTab />}
         {activeTab === 'notifications' && <NotificationsTab notifications={notifications} />}
 
       </div>

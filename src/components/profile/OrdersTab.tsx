@@ -1,27 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ApiService } from '@/services/api_client';
 
 const ORDERS_STORAGE_KEY = 'zubaida_my_orders_cache';
 const SYNCED_FLAG_KEY = 'zubaida_orders_synced';
+const apiService = new ApiService();
 
 export default function OrdersTab() {
-  const apiService = new ApiService();
-
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const fetchOrdersFromServer = async (isManualRefresh = false) => {
-    if (isManualRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  const fetchOrdersFromServer = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    else setIsLoading(true);
     setErrorMessage(null);
 
     try {
@@ -44,29 +40,42 @@ export default function OrdersTab() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const isSynced = localStorage.getItem(SYNCED_FLAG_KEY);
-    const cachedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
+    let isActive = true;
+    const initializeOrders = async () => {
+      await Promise.resolve();
+      if (!isActive) return;
 
-    // إذا تمت المزامنة مسبقاً وتوجد بيانات مخزنة، يتم عرضها مباشرة دون إرسال أي طلب للسيرفر
-    if (isSynced && cachedOrders) {
-      try {
-        const parsed = JSON.parse(cachedOrders);
-        setOrders(Array.isArray(parsed) ? parsed : []);
-        setIsLoading(false);
-      } catch (e) {
-        console.error(e);
-        fetchOrdersFromServer(false);
+      const isSynced = localStorage.getItem(SYNCED_FLAG_KEY);
+      const cachedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
+
+      // إذا تمت المزامنة مسبقاً وتوجد بيانات مخزنة، يتم عرضها مباشرة دون إرسال أي طلب للسيرفر
+      if (isSynced && cachedOrders) {
+        try {
+          const parsed = JSON.parse(cachedOrders);
+          if (isActive) {
+            setOrders(Array.isArray(parsed) ? parsed : []);
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error(error);
+          if (isActive) void fetchOrdersFromServer(false);
+        }
+      } else {
+        // أول دخول: يتم طلب الـ Endpoint من السيرفر
+        if (isActive) void fetchOrdersFromServer(false);
       }
-    } else {
-      // أول دخول: يتم طلب الـ Endpoint من السيرفر
-      fetchOrdersFromServer(false);
-    }
-  }, []);
+    };
+
+    void initializeOrders();
+    return () => {
+      isActive = false;
+    };
+  }, [fetchOrdersFromServer]);
 
   const translateStatus = (status?: string) => {
     switch (status) {

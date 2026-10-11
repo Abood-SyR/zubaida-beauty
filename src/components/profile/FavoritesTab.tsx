@@ -90,6 +90,7 @@ export default function FavoritesTab({ favorites: initialFavorites }: { favorite
             <Link href={`/product/${productId}`} className="flex items-center gap-3 flex-1">
               <div className="w-14 h-14 bg-pink-50 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                 {imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http') ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={imageUrl} alt={productName} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-[10px] text-deepRose font-bold">صورة</span>

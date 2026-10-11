@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ApiService } from '@/services/api_client';
@@ -34,25 +35,39 @@ interface OrderDetails {
 export default function OrderDetailPage() {
   const params = useParams();
   const orderId = params?.id as string;
-  const productService = new ProductService();
+  const productService = useMemo(() => new ProductService(), []);
 
+  const getCachedProductImages = () => {
+    if (typeof window === 'undefined') {
+      return {} as Record<string, string>;
+    }
+
+    try {
+      const cachedImages = localStorage.getItem('zubaida_products_images_cache');
+      if (!cachedImages) {
+        return {} as Record<string, string>;
+      }
+
+      const parsed = JSON.parse(cachedImages);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, string>) : {} as Record<string, string>;
+    } catch (e) {
+      console.error(e);
+      return {} as Record<string, string>;
+    }
+  };
+
+  const initialProductImages = useMemo(() => getCachedProductImages(), []);
+  const productImagesRef = useRef<Record<string, string>>(initialProductImages);
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [productImages, setProductImages] = useState<Record<string, string>>({});
+  const [productImages, setProductImages] = useState<Record<string, string>>(initialProductImages);
   const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const cachedImages = localStorage.getItem('zubaida_products_images_cache');
-      if (cachedImages) {
-        try {
-          setProductImages(JSON.parse(cachedImages));
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
+    productImagesRef.current = productImages;
+  }, [productImages]);
 
+  useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
         const response = await new ApiService().client.get(`/orders/${orderId}`);
@@ -60,32 +75,34 @@ export default function OrderDetailPage() {
           const orderData = response.data;
           setOrder(orderData);
 
-          const items = orderData.items || [];
-          const newImagesCache = { ...productImages };
+          const items = Array.isArray(orderData.items) ? orderData.items : [];
+          const newImagesCache = { ...productImagesRef.current };
           let hasNewImages = false;
 
           for (const item of items) {
             const prodId = item.product_id || item.source_id;
+            const normalizedProdId = typeof prodId === 'string' ? prodId : '';
             const directImg = item.thumbnail_url || item.image;
 
-            if (directImg) {
-              newImagesCache[prodId] = directImg;
+            if (normalizedProdId && directImg) {
+              newImagesCache[normalizedProdId] = directImg;
               hasNewImages = true;
-            } else if (prodId && !newImagesCache[prodId]) {
+            } else if (normalizedProdId && !newImagesCache[normalizedProdId]) {
               try {
-                const prodDetails = await productService.getProductById(prodId);
+                const prodDetails = await productService.getProductById(normalizedProdId);
                 const thumb = prodDetails?.thumbnail_url || prodDetails?.thumbnailUrl || prodDetails?.images?.[0];
                 if (thumb) {
-                  newImagesCache[prodId] = thumb;
+                  newImagesCache[normalizedProdId] = thumb;
                   hasNewImages = true;
                 }
               } catch (err) {
-                console.error(`Failed to fetch image for product ${prodId}`, err);
+                console.error(`Failed to fetch image for product ${normalizedProdId}`, err);
               }
             }
           }
 
           if (hasNewImages) {
+            productImagesRef.current = newImagesCache;
             setProductImages(newImagesCache);
             if (typeof window !== 'undefined') {
               localStorage.setItem('zubaida_products_images_cache', JSON.stringify(newImagesCache));
@@ -102,7 +119,7 @@ export default function OrderDetailPage() {
     if (orderId) {
       fetchOrderDetails();
     }
-  }, [orderId]);
+  }, [orderId, productService]);
 
   const translateStatus = (status?: string) => {
     switch (status) {
@@ -399,19 +416,20 @@ export default function OrderDetailPage() {
           <div className="space-y-3">
             {items.map((item, idx) => {
               const prodId = item.product_id || item.source_id;
-              const imgUrl = productImages[prodId] || item.thumbnail_url || item.image;
+              const normalizedProdId = typeof prodId === 'string' ? prodId : '';
+              const imgUrl = (normalizedProdId ? productImages[normalizedProdId] : undefined) || item.thumbnail_url || item.image;
               const productName = item.product_name?.['ar'] || item.product_name?.['en'] || 'منتج زبيدة بيوتي';
               const itemKind = item.item_type === 'group' ? 'مجموعة' : item.item_type === 'offer' ? 'عرض خاص' : 'منتج أساسي';
 
               return (
                 <div 
-                  key={item.id ?? `${prodId}-${idx}`} 
+                  key={item.id ?? `${normalizedProdId}-${idx}`} 
                   className="bg-pink-50/40 p-4 rounded-2xl border border-pink-100 flex items-center justify-between gap-4"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="relative w-14 h-14 rounded-xl bg-white border border-pink-100 overflow-hidden shrink-0 flex items-center justify-center">
                       {imgUrl ? (
-                        <img src={imgUrl} alt={productName} className="w-full h-full object-cover" />
+                        <Image src={imgUrl} alt={productName} fill sizes="56px" className="object-cover" unoptimized />
                       ) : (
                         <span className="text-[10px] text-deepRose font-bold">صورة</span>
                       )}
