@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import Link from 'next/link';
@@ -81,11 +82,21 @@ export default function ProductGridSection({
                   {/* زر المفضلة العائم  */}
                   <button
                     onClick={() => onToggleFavorite?.(product)}
-                    className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition"
+                    className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition flex items-center justify-center"
+                    aria-label="المفضلة"
                   >
-                    <span className={`text-xs ${isFav ? 'text-primaryRose' : 'text-gray-400'}`}>
-                      {isFav ? '❤️' : '🤍'}
-                    </span>
+                    <svg
+                      className={`w-4 h-4 ${isFav ? 'text-primaryRose fill-current' : 'text-gray-400 fill-none'}`}
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
                   </button>
 
                   {/* تفاصيل المنتج  */}
@@ -107,12 +118,25 @@ export default function ProductGridSection({
                       <span className="text-deepRose font-bold text-xs">
                         {displayPrice} ل.س
                       </span>
-                      {/* زر السلة  */}
+                      {/* زر السلة بخلفية زهرية فائقة الدقة */}
                       <button
                         onClick={() => onAddToCart?.(product)}
-                        className="bg-deepRose text-white p-1.5 rounded-lg hover:bg-primaryRose transition shadow-sm"
+                        className="bg-lightPinkBg text-deepRose p-2 rounded-lg hover:bg-pink-200 transition shadow-sm flex items-center justify-center border border-pink-100"
+                        aria-label="إضافة للسلة"
                       >
-                        🛒
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
                       </button>
                     </div>
                   </div>
