@@ -128,11 +128,11 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                 {/* الأسعار */}
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-deepRose font-black text-sm">
-                    {finalPrice} ر.س
+                    {finalPrice} ل.س
                   </span>
                   {initialPrice && initialPrice > finalPrice && (
                     <span className="text-gray-400 text-[11px] line-through">
-                      {initialPrice} ر.س
+                      {initialPrice} ل.س
                     </span>
                   )}
                 </div>

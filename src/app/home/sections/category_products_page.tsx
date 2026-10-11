@@ -199,7 +199,7 @@ export default function CategoryProductsPage({
 
                   <div className="mt-auto flex items-center justify-between">
                     <span className="text-primaryRose font-bold text-base">
-                      {displayPrice} ر.س
+                      {displayPrice} ل.س
                     </span>
                     <button
                       onClick={(event) => {
