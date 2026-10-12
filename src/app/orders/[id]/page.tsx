@@ -125,7 +125,7 @@ export default function OrderDetailPage() {
     switch (status) {
       case 'pending': return 'قيد المراجعة';
       case 'processing': return 'قيد التجهيز';
-      case 'shipped': return 'تم الشحن';
+      case 'shipping': return 'تم الشحن';
       case 'completed': return 'تم التسليم';
       case 'cancelled': return 'ملغي';
       default: return status || 'غير معروف';
