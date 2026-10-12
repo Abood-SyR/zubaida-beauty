@@ -136,7 +136,7 @@ export default function OrderDetailPage() {
     switch (status) {
       case 'pending': return 1;
       case 'processing': return 2;
-      case 'shipped': return 3;
+      case 'shipping': return 3;
       case 'completed': return 4;
       default: return 1;
     }

@@ -81,7 +81,7 @@ export default function OrdersTab() {
     switch (status) {
       case 'pending': return 'قيد المراجعة';
       case 'processing': return 'قيد التجهيز';
-      case 'shipped': return 'تم الشحن';
+      case 'shipping': return 'تم الشحن';
       case 'completed': return 'مكتمل';
       case 'cancelled': return 'ملغي';
       default: return status || 'غير معروف';
@@ -92,7 +92,7 @@ export default function OrdersTab() {
     switch (status) {
       case 'pending': return 'bg-orange-100 text-orange-600';
       case 'processing': return 'bg-blue-100 text-blue-600';
-      case 'shipped': return 'bg-purple-100 text-purple-600';
+      case 'shipping': return 'bg-purple-100 text-purple-600';
       case 'completed': return 'bg-emerald-100 text-emerald-700';
       case 'cancelled': return 'bg-red-100 text-red-600';
       default: return 'bg-gray-100 text-gray-600';
