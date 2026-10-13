@@ -16,9 +16,10 @@ interface SearchSectionProps {
   activeSearchQuery: string;
   activeSortBy: string;
   recentSearches: string[];
-  onProductSelected: (query?: string) => void;
-  suggestedProducts?: Product[];
+  trendingKeywords?: string[];
+  suggestedProducts?: Product[]; // <-- المنتجات المقترحة القادمة من الـ Home Dashboard
   isSuggestedProductsLoading?: boolean;
+  onProductSelected: (query?: string) => void;
   onCategoriesSelected: (categories: string[]) => void;
   onFilterChanged: (
     query: string,
@@ -82,9 +83,10 @@ export default function SearchSection({
   activeSearchQuery,
   activeSortBy,
   recentSearches,
-  onProductSelected,
-  suggestedProducts = [],
+  trendingKeywords = ['كرياتين', 'كريم تسبيل', 'واقي شمسي', 'لاكتولاك'],
+  suggestedProducts = [], // <-- استقبال المنتجات المقترحة المدارة
   isSuggestedProductsLoading = false,
+  onProductSelected,
   onCategoriesSelected,
   onFilterChanged,
 }: SearchSectionProps) {
@@ -93,7 +95,6 @@ export default function SearchSection({
   const [searchQuery, setSearchQuery] = useState(activeSearchQuery);
   const [sortBy, setSortBy] = useState(activeSortBy);
 
-  const keywords = ['كرياتين', 'كريم تسبيل', 'واقي شمسي', 'لاكتولاك'];
   const hasActiveFilters =
     activeSearchQuery.trim().length > 0 ||
     activeSortBy !== 'newest' ||
@@ -289,7 +290,7 @@ export default function SearchSection({
             <div>
               <h3 className="mb-3 text-sm font-bold text-deepRose">كلمات شائعة</h3>
               <div className="flex flex-wrap gap-2">
-                {keywords.map((keyword) => (
+                {trendingKeywords.map((keyword) => (
                   <button
                     type="button"
                     key={keyword}
@@ -334,6 +335,7 @@ export default function SearchSection({
                   {suggestedProducts.slice(0, 3).map((product) => {
                     const productName = getProductName(product, 'ar') || 'منتج';
                     const imageUrl = product.thumbnailUrl;
+                    const displayPrice = product.discountedPrice ?? product.price;
 
                     return (
                       <button
@@ -352,7 +354,6 @@ export default function SearchSection({
                               src={imageUrl}
                               alt={productName}
                               fill
-                              unoptimized
                               sizes="(max-width: 640px) 30vw, 180px"
                               className="object-contain"
                             />
@@ -366,7 +367,7 @@ export default function SearchSection({
                           {productName}
                         </span>
                         <span className="block px-2 pb-2 pt-1 text-xs font-bold text-deepRose">
-                          {product.discountedPrice ?? product.price} ل.س
+                          {Number(displayPrice || 0).toLocaleString('ar-SY')} ل.س
                         </span>
                       </button>
                     );

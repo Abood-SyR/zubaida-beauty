@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -122,7 +123,6 @@ export default function CollectionsSection({ groups, isLoading }: CollectionsSec
                     src={imageUrl}
                     alt={title}
                     fill
-                    unoptimized
                     sizes="340px"
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
@@ -186,7 +186,6 @@ export default function CollectionsSection({ groups, isLoading }: CollectionsSec
                             src={prodImg}
                             alt="product item"
                             fill
-                            unoptimized
                             sizes="80px"
                             className="object-contain p-1"
                           />

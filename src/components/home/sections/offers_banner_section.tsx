@@ -1,7 +1,11 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface OffersBannerSectionProps {
   offers: any[];
@@ -86,6 +90,8 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
           const displayedMainProducts = mainProducts.length > 0 ? mainProducts.slice(0, 3) : products.slice(0, 3);
           const offerId = offer['id'] || `offer_${index}`;
 
+          const imageUrl = displayedMainProducts.length > 0 ? displayedMainProducts[0]['thumbnail_url'] : null;
+
           return (
             <Link
               key={offerId}
@@ -94,15 +100,17 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
             >
               {/* قسم صور المنتجات في العرض */}
               <div className="w-[110px] h-full relative flex items-center justify-center bg-lightPinkBg/30 rounded-2xl overflow-hidden">
-                {displayedMainProducts.length > 0 && (
-                  <img
-                    src={displayedMainProducts[0]['thumbnail_url'] || ''}
+                {imageUrl && (
+                  <Image
+                    src={imageUrl}
                     alt={title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    fill
+                    sizes="110px"
+                    className="object-cover group-hover:scale-105 transition duration-300"
                   />
                 )}
                 {hasFreeGift && (
-                  <span className="absolute bottom-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                  <span className="absolute bottom-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10">
                     هدية 🎁
                   </span>
                 )}
@@ -128,11 +136,11 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                 {/* الأسعار */}
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-deepRose font-black text-sm">
-                    {finalPrice} ل.س
+                    {finalPrice.toLocaleString('ar-SY')} ل.س
                   </span>
                   {initialPrice && initialPrice > finalPrice && (
                     <span className="text-gray-400 text-[11px] line-through">
-                      {initialPrice} ل.س
+                      {initialPrice.toLocaleString('ar-SY')} ل.س
                     </span>
                   )}
                 </div>

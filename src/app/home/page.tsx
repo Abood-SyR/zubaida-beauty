@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-hooks/immutability */
 'use client';
 
@@ -21,6 +22,47 @@ import SearchSection from '@/app/home/sections/search_section';
 
 const favoriteService = new FavoriteService();
 
+interface CategoryItem {
+  id: string;
+  name?: string | Record<string, string> | null;
+  image_url?: string | null;
+  image_version?: number | null;
+  parent_id?: string | null;
+  is_active?: boolean;
+}
+
+interface OfferItem {
+  id: string;
+  title?: string;
+  offer_type?: string;
+  discount_percentage?: number;
+  initial_price?: number;
+  final_price?: number;
+  free_product_id?: string | null;
+  is_star?: boolean;
+  end_date?: string | null;
+  products?: Product[];
+  [key: string]: unknown; // <-- إضافة هذا السطر لحل مشكلة الـ Index Signature
+}
+
+interface GroupItem {
+  id: string;
+  name?: string;
+  description?: string | null;
+  features?: string[] | null;
+  usages?: string[] | null;
+  compatibility?: string | null;
+  custom_price?: number | null;
+  calculated_price?: number | null;
+  final_price?: number;
+  image_url?: string | null;
+  is_active?: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+  products?: Product[];
+  [key: string]: unknown; // <-- إضافة هذا السطر لحل المشكلة
+}
+
 export default function HomeScreen() {
   const searchParams = useSearchParams();
 
@@ -31,13 +73,12 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
+  const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
   const [isSuggestedProductsLoading, setIsSuggestedProductsLoading] = useState(true);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [categories, setCategories] = useState<
-    { id: string; name?: string | Record<string, string> | null }[]
-  >([]);
-  const [featuredOffers, setFeaturedOffers] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [featuredOffers, setFeaturedOffers] = useState<OfferItem[]>([]);
+  const [groups, setGroups] = useState<GroupItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -52,7 +93,6 @@ export default function HomeScreen() {
     selectedCategories.length > 0 ||
     sortBy !== 'newest';
 
-  // تحميل بيانات الـ Home عند الإطلاق الأول
   useEffect(() => {
     loadHomeData();
     cartManager.loadFromStorage();
@@ -72,57 +112,35 @@ export default function HomeScreen() {
       });
   }, []);
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadSuggestedProducts = async () => {
-      try {
-        const popularProducts = await new ProductService().getProducts({
-          sortBy: 'popular',
-          limit: 3,
-        });
-        const parsedProducts = popularProducts.map((product) =>
-          parseProductFromJson({ ...product }),
-        );
-
-        if (isActive) setSuggestedProducts(parsedProducts);
-      } catch (error) {
-        console.error('Error loading popular products:', error);
-      } finally {
-        if (isActive) setIsSuggestedProductsLoading(false);
-      }
-    };
-
-    void loadSuggestedProducts();
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
   const loadHomeData = async () => {
     setIsLoading(true);
+    setIsSuggestedProductsLoading(true);
     try {
       const homeData = await HomeService.getHomeDashboard();
       
-      const cats: any[] = Array.isArray(homeData.categories) ? homeData.categories : [];
-      const newProds = (homeData.new_products || []).map((p: any) => parseProductFromJson(p));
-      const prods = (homeData.products || []).map((p: any) => parseProductFromJson(p));
-      const offers = Array.isArray(homeData.featured_offers) ? homeData.featured_offers : [];
-      const grps = Array.isArray(homeData.groups) ? homeData.groups : [];
+      const cats: CategoryItem[] = Array.isArray(homeData.categories) ? homeData.categories : [];
+      const newProds = (homeData.new_products || []).map((p: Record<string, unknown>) => parseProductFromJson(p));
+      const prods = (homeData.products || []).map((p: Record<string, unknown>) => parseProductFromJson(p));
+      const offers: OfferItem[] = Array.isArray(homeData.featured_offers) ? homeData.featured_offers : [];
+      const grps: GroupItem[] = Array.isArray(homeData.groups) ? homeData.groups : [];
+      const keywords = Array.isArray(homeData.trending_keywords) ? homeData.trending_keywords : [];
+      const suggestedProds = (homeData.suggested_products || []).map((p: Record<string, unknown>) => parseProductFromJson(p));
 
       setCategories(cats);
       setNewProducts(newProds);
       setProducts(prods);
       setFeaturedOffers(offers);
       setGroups(grps);
+      setTrendingKeywords(keywords);
+      setSuggestedProducts(suggestedProds);
     } catch (e) {
       console.error('❌ Error loading home data:', e);
     } finally {
       setIsLoading(false);
+      setIsSuggestedProductsLoading(false);
     }
   };
 
-  // فلترة المنتجات عند البحث أو تغيير الفئات
   const filterProducts = async (query: string, catId: string, sort: string) => {
     setIsLoading(true);
     try {
@@ -146,7 +164,6 @@ export default function HomeScreen() {
     }
   };
 
-  // التعامل مع تغيير الفلاتر أو البحث (مع Debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (hasActiveSearchOrFilters) {
@@ -159,7 +176,6 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery, selectedCategories, sortBy]);
 
-  // تبديل المفضلة
   const handleToggleFavorite = async (product: Product) => {
     const productId = product.id;
     try {
@@ -174,7 +190,6 @@ export default function HomeScreen() {
     }
   };
 
-  // إضافة للسلة
   const handleAddToCart = (product: Product) => {
     cartManager.addProduct(product);
     const prodName = product.name?.['ar'] || Object.values(product.name || {})[0] || 'المنتج';
@@ -183,7 +198,6 @@ export default function HomeScreen() {
 
   return (
     <main className="min-h-screen bg-lightPinkBg pb-16" dir="rtl">
-      {/* شريط الأنفبار العلوي */}
       <header className="sticky top-0 z-40 bg-surfaceWhite/80 backdrop-blur-md border-b border-pink-100 px-4 py-4 mb-6 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-center items-center">
           <h1 className="text-xl font-bold text-deepRose">Zubaida Beauty</h1>
@@ -191,13 +205,13 @@ export default function HomeScreen() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-6">
-        {/* شريط البحث المتقدم */}
         <SearchSection 
           categories={categories}
           selectedCategories={selectedCategories}
           activeSearchQuery={searchQuery}
           activeSortBy={sortBy}
           recentSearches={recentSearches}
+          trendingKeywords={trendingKeywords} 
           suggestedProducts={suggestedProducts}
           isSuggestedProductsLoading={isSuggestedProductsLoading}
           onProductSelected={handleProductSelected}

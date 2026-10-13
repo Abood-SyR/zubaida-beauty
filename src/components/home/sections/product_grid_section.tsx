@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Product } from '@/models/product';
 
 interface ProductGridSectionProps {
@@ -67,10 +67,12 @@ export default function ProductGridSection({
                     className="w-full h-36 bg-lightPinkBg/40 relative block overflow-hidden"
                   >
                     {hasValidImage ? (
-                      <img
+                      <Image
                         src={product.thumbnailUrl!}
                         alt={productName}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                        className="object-cover group-hover:scale-105 transition duration-300"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-textMuted">
@@ -82,7 +84,7 @@ export default function ProductGridSection({
                   {/* زر المفضلة العائم  */}
                   <button
                     onClick={() => onToggleFavorite?.(product)}
-                    className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition flex items-center justify-center"
+                    className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition flex items-center justify-center z-10"
                     aria-label="المفضلة"
                   >
                     <svg
@@ -116,7 +118,7 @@ export default function ProductGridSection({
 
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-deepRose font-bold text-xs">
-                        {displayPrice} ل.س
+                        {Number(displayPrice || 0).toLocaleString('ar-SY')} ل.س
                       </span>
                       {/* زر السلة بخلفية زهرية فائقة الدقة */}
                       <button

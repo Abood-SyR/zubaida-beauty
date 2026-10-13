@@ -297,7 +297,6 @@ function OfferProductImage({ product, title }: { product: OfferProduct; title: s
         src={imageUrl}
         alt={localizedText(product['name'], title)}
         fill
-        unoptimized
         sizes="160px"
         className="object-contain transition-transform duration-500 group-hover:scale-105"
       />

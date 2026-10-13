@@ -169,9 +169,8 @@ export default function CategoryProductsPage({
                         src={product.thumbnailUrl}
                         alt={productName}
                         fill
-                        unoptimized
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        className="product-image w-full h-full"
+                        className="product-image w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-textMuted text-sm">
@@ -186,7 +185,7 @@ export default function CategoryProductsPage({
                       handleToggleFavorite(product);
                     }}
                     aria-label={isFav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
-                    className="absolute top-5 right-5 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition"
+                    className="absolute top-5 right-5 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition z-10"
                   >
                     <span className={`text-sm ${isFav ? 'text-primaryRose font-bold' : 'text-gray-400'}`}>
                       {isFav ? '❤️' : '🤍'}
@@ -199,7 +198,7 @@ export default function CategoryProductsPage({
 
                   <div className="mt-auto flex items-center justify-between">
                     <span className="text-primaryRose font-bold text-base">
-                      {displayPrice} ل.س
+                      {Number(displayPrice || 0).toLocaleString('ar-SY')} ل.س
                     </span>
                     <button
                       onClick={(event) => {

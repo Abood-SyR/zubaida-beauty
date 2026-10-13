@@ -94,9 +94,8 @@ export default function ProductGridSection({
                         src={product.thumbnailUrl!}
                         alt={productName}
                         fill
-                        unoptimized
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        className="product-image w-full h-full"
+                        className="product-image w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-textMuted">
@@ -112,7 +111,7 @@ export default function ProductGridSection({
                       onToggleFavorite?.(product);
                     }}
                     aria-label={isFav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
-                    className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition"
+                    className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition z-10"
                   >
                     <span className={`text-xs ${isFav ? 'text-primaryRose' : 'text-gray-400'}`}>
                       {isFav ? '❤️' : '🤍'}
@@ -134,7 +133,7 @@ export default function ProductGridSection({
 
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-deepRose font-bold text-xs">
-                        {displayPrice} ل.س
+                        {Number(displayPrice || 0).toLocaleString('ar-SY')} ل.س
                       </span>
                       {/* زر السلة  */}
                       <button

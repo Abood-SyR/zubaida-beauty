@@ -3,10 +3,17 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
+import { getProductName, Product } from '@/models/product';
+import { useRouter } from 'next/navigation';
 
 interface SearchSectionProps {
   categories: any[];
   selectedCategories: string[];
+  trendingKeywords?: string[]; // <-- إضافة استقبال الكلمات الرائجة
+  suggestedProducts?: Product[]; // <-- إضافة استقبال المنتجات المقترحة للبحث
+  isSuggestedProductsLoading?: boolean;
+  onProductSelected?: (query?: string) => void;
   onCategoriesSelected: (categories: string[]) => void;
   onFilterChanged: (
     query: string,
@@ -20,15 +27,18 @@ interface SearchSectionProps {
 export default function SearchSection({
   categories = [],
   selectedCategories = [],
+  trendingKeywords = ['كرياتين', 'كريم تسبيل', 'واقي شمسي', 'لاكتولاك'],
+  suggestedProducts = [],
+  isSuggestedProductsLoading = false,
+  onProductSelected,
   onCategoriesSelected,
   onFilterChanged,
 }: SearchSectionProps) {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [recentSearches, setRecentSearches] = useState<string[]>(['كرياتين', 'واقي شمسي']);
-
-  const keywords = ['كرياتين', 'كريم تسبيل', 'واقي شمسي', 'لاكتولاك'];
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -41,6 +51,7 @@ export default function SearchSection({
     if (query && !recentSearches.includes(query)) {
       setRecentSearches([query, ...recentSearches.slice(0, 4)]);
     }
+    onProductSelected?.(query);
     setIsExpanded(false);
   };
 
@@ -149,11 +160,11 @@ export default function SearchSection({
             </div>
           </div>
 
-          {/* كلمات شائعة */}
+          {/* كلمات شائعة (مستمدة من جدول الكلمات الرائجة trending_keywords) */}
           <div>
             <h3 className="font-bold text-sm text-deepRose mb-3">كلمات شائعة</h3>
             <div className="flex flex-wrap gap-2">
-              {keywords.map((kw, idx) => (
+              {trendingKeywords.map((kw, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleExecuteSearch(kw)}
@@ -163,6 +174,63 @@ export default function SearchSection({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* المنتجات المقترحة للبحث */}
+          <div>
+            <h3 className="font-bold text-sm text-deepRose mb-3">منتجات رائجة لك</h3>
+            {isSuggestedProductsLoading ? (
+              <div className="grid grid-cols-3 gap-2">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className="h-28 animate-pulse rounded-xl bg-lightPinkBg" />
+                ))}
+              </div>
+            ) : suggestedProducts.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {suggestedProducts.slice(0, 3).map((product) => {
+                  const productName = getProductName(product, 'ar') || 'منتج';
+                  const imageUrl = product.thumbnailUrl;
+                  const displayPrice = product.discountedPrice ?? product.price;
+
+                  return (
+                    <button
+                      type="button"
+                      key={product.id}
+                      onClick={() => {
+                        setIsExpanded(false);
+                        onProductSelected?.();
+                        router.push(`/product/${product.id}`);
+                      }}
+                      className="min-w-0 overflow-hidden rounded-xl border border-pink-100 bg-white text-right transition hover:border-primaryRose"
+                    >
+                      {imageUrl && imageUrl.startsWith('http') ? (
+                        <div className="relative aspect-[4/3] w-full bg-white">
+                          <Image
+                            src={imageUrl}
+                            alt={productName}
+                            fill
+                            sizes="(max-width: 640px) 30vw, 180px"
+                            className="object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex aspect-[4/3] items-center justify-center bg-lightPinkBg text-xs text-textMuted">
+                          صورة غير متوفرة
+                        </div>
+                      )}
+                      <span className="block truncate px-2 pt-2 text-xs font-semibold text-textDark">
+                        {productName}
+                      </span>
+                      <span className="block px-2 pb-2 pt-1 text-xs font-bold text-deepRose">
+                        {Number(displayPrice || 0).toLocaleString('ar-SY')} ل.س
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-textMuted">لا توجد منتجات رائجة حالياً</p>
+            )}
           </div>
 
           {/* عمليات البحث الأخيرة */}

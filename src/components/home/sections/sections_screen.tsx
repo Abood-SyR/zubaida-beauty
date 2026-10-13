@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface SectionsScreenProps {
   categories: any[];
@@ -54,11 +56,13 @@ export default function SectionsScreen({ categories = [], onCategoryTap }: Secti
               className="flex flex-col items-center flex-shrink-0 group"
             >
               {/* صورة القسم الدائرية    */}
-              <div className="w-[75px] h-[75px] rounded-full border-2 border-deepRose/30 shadow-md overflow-hidden bg-lightPinkBg/55 flex items-center justify-center group-hover:scale-105 transition duration-300">
+              <div className="w-[75px] h-[75px] rounded-full border-2 border-deepRose/30 shadow-md overflow-hidden bg-lightPinkBg/55 flex items-center justify-center group-hover:scale-105 transition duration-300 relative">
                 {hasValidImage ? (
-                  <img
+                  <Image
                     src={imageUrl}
                     alt={title}
+                    fill
+                    sizes="75px"
                     className="w-full h-full object-cover"
                   />
                 ) : (

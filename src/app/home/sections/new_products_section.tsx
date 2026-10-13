@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Product } from '@/models/product';
 
 interface NewProductsSectionProps {
@@ -76,10 +76,12 @@ export default function NewProductsSection({
                 {/* صورة المنتج */}
                 <div className="w-full h-[110px] bg-white relative block overflow-hidden">
                   {hasValidImage ? (
-                    <img
+                    <Image
                       src={product.thumbnailUrl!}
                       alt={productName}
-                      className="product-image w-full h-full"
+                      fill
+                      sizes="155px"
+                      className="product-image w-full h-full object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-textMuted">
@@ -95,7 +97,7 @@ export default function NewProductsSection({
                     onToggleFavorite?.(product);
                   }}
                   aria-label={isFav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
-                  className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition"
+                  className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full shadow hover:scale-110 transition z-10"
                 >
                   <span className={`text-xs ${isFav ? 'text-primaryRose' : 'text-gray-400'}`}>
                     {isFav ? '❤️' : '🤍'}
@@ -117,7 +119,7 @@ export default function NewProductsSection({
 
                   <div className="flex items-center justify-between mt-auto">
                     <span className="text-deepRose font-bold text-xs">
-                      {displayPrice} ل.س
+                      {Number(displayPrice || 0).toLocaleString('ar-SY')} ل.س
                     </span>
                     <button
                       onClick={(event) => {
