@@ -245,7 +245,7 @@ export default function HomeClientView() {
               اتصل بنا
             </Link>
             <Link
-              href="/help/faq"
+              href="/"
               className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
             >
               حول زبيدة بيوتي
