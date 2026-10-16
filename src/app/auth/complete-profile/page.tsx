@@ -11,27 +11,23 @@ import { ApiService } from '@/services/api_client';
 export default function CompleteProfilePage() {
   const router = useRouter();
   const showToast = useToast();
-  const apiService = new ApiService();
+  const [apiService] = useState(() => new ApiService());
 
   const [fullName, setFullName] = useState('');
   const [detailedAddress, setDetailedAddress] = useState('');
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  
+  // القائمة الديناميكية للتفضيلات
+  const [availablePreferences, setAvailablePreferences] = useState<string[]>([]);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
-  // قائمة تفضيلات منتجات العناية والجمال المتاحة للاختيار
-  const availablePreferences = [
-    'العناية بالبشرة',
-    'مكياج ومستحضرات تجميل',
-    'العناية بالشعر',
-    'عطور ومباخر',
-    'العناية بالجسم والاستحمام',
-    'منتجات العرض الخاص والخصومات'
-  ];
-
-  // التحقق من وجود التوكن وجلب البيانات الحالية إن وجدت
+  // جلب البيانات والتفضيلات مرة واحدة فقط عند تحميل الصفحة لمنع تكرار الطلبات
   useEffect(() => {
-    const checkUser = async () => {
+    let isMounted = true;
+
+    const initData = async () => {
       const token = typeof window !== 'undefined' ? (localStorage.getItem('access_token') || localStorage.getItem('token')) : null;
       if (!token) {
         showToast('يرجى تسجيل الدخول أولاً', 'error');
@@ -40,26 +36,51 @@ export default function CompleteProfilePage() {
       }
 
       try {
-        const res = await apiService.client.get('/auth/me');
-        if (res.status === 200 && res.data) {
-          if (res.data.full_name && res.data.full_name !== 'عميل جديد') {
-            setFullName(res.data.full_name);
+        const [userRes, prefRes] = await Promise.all([
+          apiService.client.get('/auth/me'),
+          apiService.client.get('/auth/preferences-list').catch(() => ({ data: { available_preferences: [] } }))
+        ]);
+
+        if (!isMounted) return;
+
+        if (userRes.status === 200 && userRes.data) {
+          if (userRes.data.full_name && userRes.data.full_name !== 'عميل جديد') {
+            setFullName(userRes.data.full_name);
           }
-          if (res.data.address?.detailed) {
-            setDetailedAddress(res.data.address.detailed);
+          if (userRes.data.address?.detailed) {
+            setDetailedAddress(userRes.data.address.detailed);
+          }
+          if (userRes.data.address?.preferences) {
+            setSelectedPreferences(userRes.data.address.preferences);
+          }
+          
+          // إذا كانت البيانات مكتملة مسبقاً في قاعدة البيانات، نحدث الذاكرة المحلية احتياطياً
+          if (userRes.data.full_name && userRes.data.full_name !== 'عميل جديد' && userRes.data.address?.detailed) {
+            localStorage.setItem('profile_completed', 'true');
           }
         }
+
+        if (prefRes.data?.available_preferences) {
+          setAvailablePreferences(prefRes.data.available_preferences);
+        }
       } catch {
-        showToast('فشل جلب بيانات الحساب', 'error');
+        if (isMounted) {
+          showToast('فشل جلب بيانات الحساب', 'error');
+        }
       } finally {
-        setIsFetching(false);
+        if (isMounted) {
+          setIsFetching(false);
+        }
       }
     };
 
-    checkUser();
-  }, [apiService.client, router, showToast]);
+    initData();
 
-  // تبديل اختيار التفضيل (تحديد أو إلغاء تحديد)
+    return () => {
+      isMounted = false;
+    };
+  }, [apiService, router, showToast]);
+
   const togglePreference = (item: string) => {
     if (selectedPreferences.includes(item)) {
       setSelectedPreferences(selectedPreferences.filter((p) => p !== item));
@@ -68,7 +89,6 @@ export default function CompleteProfilePage() {
     }
   };
 
-  // حفظ البيانات وإرسالها للباك إند
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -92,6 +112,9 @@ export default function CompleteProfilePage() {
       });
 
       if (response.status === 200) {
+        // تخزين علامة في الذاكرة المحلية بأن البروفايل مكتمل تماماً لمنع محاولات التخطي
+        localStorage.setItem('profile_completed', 'true');
+        
         showToast('تم إكمال بيانات الحساب بنجاح', 'success');
         router.push('/home');
       } else {
@@ -106,22 +129,16 @@ export default function CompleteProfilePage() {
 
   if (isFetching) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#FF9a9e] via-[#fecfef] to-[#ffecd2] flex justify-center items-center">
-        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-lightPinkBg flex justify-center items-center">
+        <div className="w-8 h-8 border-4 border-deepRose border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#FF9a9e] via-[#fecfef] to-[#ffecd2] flex flex-col justify-between p-4 sm:p-8 relative overflow-hidden" dir="rtl">
-      
-      {/* خلفية كرات متحركة ناعمة */}
-      <div className="absolute top-[-15%] left-[-15%] w-[550px] h-[550px] rounded-full bg-pink-300/40 blur-[90px] animate-pulse pointer-events-none" style={{ animationDuration: '9s' }} />
-      <div className="absolute bottom-[-15%] right-[-15%] w-[650px] h-[650px] rounded-full bg-purple-300/35 blur-[110px] animate-bounce pointer-events-none" style={{ animationDuration: '12s' }} />
-
+    <main className="min-h-screen bg-lightPinkBg flex flex-col justify-between p-4 sm:p-8 relative overflow-hidden" dir="rtl">
       <div className="w-full max-w-lg mx-auto relative z-10 my-auto py-6">
         
-        {/* الشعار */}
         <header className="mb-6 text-center flex flex-col items-center">
           <div className="w-40 my-2">
             <Image
@@ -137,10 +154,8 @@ export default function CompleteProfilePage() {
           <p className="text-xs text-textDark/70 font-bold mt-1">يرجى استكمال بياناتك لنقدم لك أفضل تجربة تسوق</p>
         </header>
 
-        {/* نموذج البيانات */}
-        <form onSubmit={handleSaveProfile} className="bg-white/85 backdrop-blur-md p-6 sm:p-8 rounded-3xl shadow-sm space-y-5">
+        <form onSubmit={handleSaveProfile} className="bg-surfaceWhite backdrop-blur-md p-6 sm:p-8 rounded-3xl shadow-sm border border-pink-100 space-y-5">
           
-          {/* الاسم الكامل */}
           <div>
             <label className="block text-xs font-bold text-textDark/90 mb-1.5 pr-1">
               الاسم الكامل <span className="text-deepRose">*</span>
@@ -151,11 +166,10 @@ export default function CompleteProfilePage() {
               onChange={(e) => setFullName(e.target.value)}
               required
               placeholder="مثال: فاطمة أحمد"
-              className="w-full px-5 py-3.5 rounded-2xl border-none text-sm text-textDark font-bold focus:outline-none focus:ring-2 focus:ring-deepRose/40 bg-white shadow-inner"
+              className="w-full px-5 py-3.5 rounded-2xl border border-pink-200 text-sm text-textDark font-bold focus:outline-none focus:ring-2 focus:ring-deepRose/40 bg-surfaceWhite shadow-sm"
             />
           </div>
 
-          {/* الموقع التفصيلي */}
           <div>
             <label className="block text-xs font-bold text-textDark/90 mb-1.5 pr-1">
               الموقع التفصيلي لتوصيل الطلبات <span className="text-deepRose">*</span>
@@ -167,31 +181,30 @@ export default function CompleteProfilePage() {
               required
               rows={3}
               placeholder="مثال: دمشق، المزة، شارع الفردوس، بناء رقم 12، الطابق الثالث"
-              className="w-full p-4 rounded-2xl border-none text-xs text-textDark font-bold focus:outline-none focus:ring-2 focus:ring-deepRose/40 bg-white shadow-inner resize-none"
+              className="w-full p-4 rounded-2xl border border-pink-200 text-xs text-textDark font-bold focus:outline-none focus:ring-2 focus:ring-deepRose/40 bg-surfaceWhite shadow-sm resize-none"
             />
           </div>
 
-          {/* التفضيلات واهتمامات المتجر */}
           <div>
             <label className="block text-xs font-bold text-textDark/90 mb-2 pr-1">
               ما هي اهتماماتك وتفضيلاتك في المتجر؟ (اختياري)
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {availablePreferences.map((pref, index) => {
+            <div className="grid grid-cols-2 gap-2.5">
+              {availablePreferences.map((pref) => {
                 const isSelected = selectedPreferences.includes(pref);
                 return (
                   <button
-                    key={index}
+                    key={pref}
                     type="button"
                     onClick={() => togglePreference(pref)}
-                    className={`py-2.5 px-3 rounded-2xl text-xs font-bold transition text-right flex items-center justify-between ${
+                    className={`py-3 px-3.5 rounded-2xl text-xs font-bold transition-all text-right flex items-center justify-between border ${
                       isSelected
-                        ? 'bg-deepRose text-white shadow-sm'
-                        : 'bg-white/90 text-textDark/80 hover:bg-pink-50 shadow-xs'
+                        ? 'bg-deepRose text-white border-deepRose shadow-md scale-[1.02]'
+                        : 'bg-surfaceWhite text-textDark/80 border-pink-200 hover:border-deepRose/50 shadow-sm'
                     }`}
                   >
-                    <span>{pref}</span>
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${isSelected ? 'bg-white text-deepRose' : 'border border-gray-300'}`}>
+                    <span className="line-clamp-1">{pref}</span>
+                    <span className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-white text-deepRose font-black' : 'border border-pink-300'}`}>
                       {isSelected ? '✓' : ''}
                     </span>
                   </button>
@@ -200,11 +213,10 @@ export default function CompleteProfilePage() {
             </div>
           </div>
 
-          {/* زر الحفظ والمتابعة */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full h-13 bg-deepRose text-white font-black rounded-2xl hover:bg-primaryRose transition-all shadow-md flex items-center justify-center mt-6 text-sm"
+            className="w-full h-13 bg-deepRose text-white font-black rounded-2xl hover:bg-primaryRose active:scale-[0.98] transition-all shadow-md flex items-center justify-center mt-6 text-sm"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -1,21 +1,32 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CartManager } from '@/services/cart_manager';
+import { ProductService } from '@/services/product_service';
+import { Product, parseProductFromJson } from '@/models/product';
 import { ApiService } from '@/services/api_client';
 import { useToast } from '@/components/ui/toast_provider';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('product_id');
+
   const cartManager = CartManager.getInstance();
   const apiService = new ApiService();
+  const productService = new ProductService();
   const showToast = useToast();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // حالة المنتج الفوري في حال جاء المستخدم من زر "طلب الآن"
+  const [instantProduct, setInstantProduct] = useState<Product | null>(null);
+  const [isProductLoading, setIsProductLoading] = useState(false);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -33,11 +44,34 @@ export default function CheckoutPage() {
   const [invoiceNumber, setInvoiceNumber] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
-  const shamCashNumber = 'SC-98214563-SY';
+  const maskedShamCash = 'SC-98214892357982357563-SY';
+  const shamCashNumber = maskedShamCash.slice(0, 8) + '...';
 
+  // جلب تفاصيل المنتج الفوري أو تحميل السلة العادية مع تجنب التحذير بتأجيل حالة التحميل أصولاً
+  useEffect(() => {
+    if (productId) {
+      // استخدام Promise.resolve لتأجيل الـ setState وتجنب الـ cascading renders
+      Promise.resolve().then(() => setIsProductLoading(true));
+      
+      productService.getProductById(productId)
+        .then((data) => {
+          setInstantProduct(parseProductFromJson(data));
+        })
+        .catch((err) => {
+          console.error('Error fetching instant product:', err);
+          showToast('تعذر جلب تفاصيل المنتج المطلوب للطلب الفوري', 'error');
+        })
+        .finally(() => {
+          setIsProductLoading(false);
+        });
+    } else {
+      CartManager.getInstance().loadFromStorage();
+    }
+  }, [productId, productService, showToast]);
+
+  // جلب بيانات المستخدم وتعبئة الاسم، الهاتف، والعنوان تلقائياً
   useEffect(() => {
     let isMounted = true;
-    cartManager.loadFromStorage();
 
     new ApiService().client.get('/auth/me')
       .then((response) => {
@@ -46,6 +80,7 @@ export default function CheckoutPage() {
         const profile = response.data as Record<string, unknown>;
         const username = typeof profile['username'] === 'string' ? profile['username'] : '';
         const isPhoneUsername = /^[+0-9][0-9 +()-]{5,}$/.test(username);
+        
         setIsLoggedIn(true);
         setName(typeof profile['full_name'] === 'string' ? profile['full_name'] : isPhoneUsername ? '' : username);
 
@@ -62,8 +97,9 @@ export default function CheckoutPage() {
           setAddress(savedAddress);
         } else if (savedAddress && typeof savedAddress === 'object') {
           const addressData = savedAddress as Record<string, unknown>;
-          const savedAddressText = addressData['address'] ?? addressData['address_text'];
-          if (typeof savedAddressText === 'string') setAddress(savedAddressText);
+          if (typeof addressData['detailed'] === 'string') {
+            setAddress(addressData['detailed']);
+          }
         }
       })
       .catch(() => {
@@ -76,11 +112,20 @@ export default function CheckoutPage() {
     return () => {
       isMounted = false;
     };
-  }, [cartManager]);
+  }, []);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(shamCashNumber);
     showToast('تم نسخ رمز الحساب بنجاح');
+  };
+
+  const handleReturnToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (productId && instantProduct) {
+      cartManager.addProduct(instantProduct);
+      showToast('تمت إضافة المنتج إلى السلة بنجاح', 'success');
+    }
+    router.push('/cart');
   };
 
   const handleGetMyCurrentLocation = () => {
@@ -139,7 +184,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (cartManager.items.length === 0) {
+    if (productId && !instantProduct) {
+      showToast('جاري تحميل تفاصيل المنتج، يرجى الانتظار قليلاً', 'error');
+      return;
+    }
+
+    if (!productId && cartManager.items.length === 0) {
       showToast('السلة فارغة، أضف المنتجات قبل إتمام الطلب', 'error');
       return;
     }
@@ -159,20 +209,26 @@ export default function CheckoutPage() {
     setIsLoading(true);
 
     try {
-      const itemsList = cartManager.items.map((item) => {
-        const target = item.isGroup
-          ? { group_id: item.id }
-          : item.isOffer
-          ? { offer_id: item.id }
-          : { product_id: item.id };
-        return { ...target, quantity: item.quantity };
-      });
+      let itemsList;
+      if (productId && instantProduct) {
+        itemsList = [{ product_id: instantProduct.id, quantity: 1 }];
+      } else {
+        itemsList = cartManager.items.map((item) => {
+          const target = item.isGroup
+            ? { group_id: item.id }
+            : item.isOffer
+            ? { offer_id: item.id }
+            : { product_id: item.id };
+          return { ...target, quantity: item.quantity };
+        });
+      }
 
       let proofUrl: string | undefined;
       if (paymentMethod === 'sham_cash' && shamCashType !== 'invoice') {
         const proofFile = shamCashType === 'image' ? transferImage : transferPdf;
         if (!proofFile) {
           showToast('أرفق صورة أو ملف PDF لإثبات الحوالة', 'error');
+          setIsLoading(false);
           return;
         }
         const formData = new FormData();
@@ -207,7 +263,11 @@ export default function CheckoutPage() {
           throw new Error('تم إنشاء الطلب لكن لم يصل رقم الطلب من الخادم');
         }
         localStorage.setItem('last_order_id', orderId);
-        cartManager.clear();
+        
+        if (!productId) {
+          cartManager.clear();
+        }
+
         showToast(`تم إرسال الطلب بنجاح! رقم الطلب: ${orderId.slice(0, 8)}`);
         router.push(isLoggedIn ? `/orders/${orderId}` : '/home');
       }
@@ -219,16 +279,18 @@ export default function CheckoutPage() {
     }
   };
 
-  const totalAmountValue = cartManager.totalAmount || 0;
+  const totalAmountValue = productId && instantProduct 
+    ? instantProduct.price 
+    : (cartManager.totalAmount || 0);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_#fff0f6_0%,_#fff8fb_36%,_#fff_100%)] pb-24" dir="rtl">
       <header className="bg-white/80 border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40 backdrop-blur-md">
         <div className="max-w-xl mx-auto flex justify-between items-center">
-          <Link href="/cart" className="text-primaryRose text-xs font-bold hover:underline flex items-center gap-1">
+          <button onClick={handleReturnToCart} className="text-primaryRose text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/></svg>
             <span>العودة للسلة</span>
-          </Link>
+          </button>
           <h1 className="text-base font-black text-deepRose">إتمام الطلب</h1>
           <div className="w-12"></div>
         </div>
@@ -237,7 +299,7 @@ export default function CheckoutPage() {
       <div className="max-w-xl mx-auto px-4">
         <form onSubmit={handleSubmitOrder} className="space-y-6">
 
-          {/* ملخص المشتريات والفاتورة المتوافق مع هيكل CartItem */}
+          {/* ملخص المشتريات والفاتورة */}
           <div className="bg-white p-6 rounded-[28px] border border-pink-100 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-pink-100 pb-3">
               <h2 className="font-black text-deepRose text-sm flex items-center gap-2">
@@ -247,45 +309,76 @@ export default function CheckoutPage() {
                 <span>ملخص المشتريات والفاتورة</span>
               </h2>
               <span className="text-[11px] font-bold text-primaryRose bg-pink-50 px-2.5 py-1 rounded-full border border-pink-100">
-                {cartManager.items.length} عناصر
+                {productId ? 'عنصر واحد' : `${cartManager.items.length} عناصر`}
               </span>
             </div>
 
-            <div className="max-h-56 overflow-y-auto space-y-3 pr-1 divide-y divide-pink-50">
-              {cartManager.items.map((item, index) => {
-                const imageUrl = item.imageUrl;
-                const hasImage = !!imageUrl && imageUrl.startsWith('http');
-                return (
-                  <div key={`${item.id}-${index}`} className="flex items-center justify-between pt-2.5 first:pt-0">
+            {productId ? (
+              isProductLoading ? (
+                <div className="py-6 text-center text-xs text-gray-400">جاري تحميل تفاصيل المنتج...</div>
+              ) : instantProduct ? (
+                <div className="space-y-3 divide-y divide-pink-50">
+                  <div className="flex items-center justify-between pt-1">
                     <div className="flex items-center gap-3">
-                      {hasImage ? (
-                        <div className="relative h-11 w-11 rounded-xl overflow-hidden border border-pink-100 bg-pink-50/50 flex-shrink-0">
-                          <Image
-                            src={imageUrl}
-                            alt={item.name}
-                            fill
-                            unoptimized
-                            className="object-cover h-full w-full"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-11 w-11 rounded-xl border border-pink-100 bg-pink-50 flex items-center justify-center text-deepRose text-xs font-bold flex-shrink-0">
-                          🛒
-                        </div>
-                      )}
+                      <div className="relative h-12 w-12 rounded-xl overflow-hidden border border-pink-100 bg-pink-50/50 flex-shrink-0">
+                        <Image
+                          src={instantProduct.thumbnailUrl || instantProduct.images?.[0] || '/images.jpg'}
+                          alt={instantProduct.getName('ar')}
+                          fill
+                          unoptimized
+                          className="object-cover h-full w-full"
+                        />
+                      </div>
                       <div>
-                        <h4 className="text-xs font-bold text-textDark line-clamp-1">{item.name}</h4>
-                        <span className="text-[10px] text-textMuted font-medium">الكمية: {item.quantity}</span>
+                        <h4 className="text-xs font-bold text-textDark line-clamp-1">{instantProduct.getName('ar')}</h4>
+                        <span className="text-[10px] text-textMuted font-medium">الكمية: 1</span>
                       </div>
                     </div>
-
                     <div className="text-left font-mono text-xs font-black text-deepRose">
-                      {(item.unitPrice * item.quantity).toLocaleString('ar-SY')} ل.س
+                      {instantProduct.price.toLocaleString('ar-SY')} ل.س
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-red-500">لم يتم العثور على بيانات المنتج</div>
+              )
+            ) : (
+              <div className="max-h-56 overflow-y-auto space-y-3 pr-1 divide-y divide-pink-50">
+                {cartManager.items.map((item, index) => {
+                  const imageUrl = item.imageUrl;
+                  const hasImage = !!imageUrl && imageUrl.startsWith('http');
+                  return (
+                    <div key={`${item.id}-${index}`} className="flex items-center justify-between pt-2.5 first:pt-0">
+                      <div className="flex items-center gap-3">
+                        {hasImage ? (
+                          <div className="relative h-11 w-11 rounded-xl overflow-hidden border border-pink-100 bg-pink-50/50 flex-shrink-0">
+                            <Image
+                              src={imageUrl}
+                              alt={item.name}
+                              fill
+                              unoptimized
+                              className="object-cover h-full w-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-11 w-11 rounded-xl border border-pink-100 bg-pink-50 flex items-center justify-center text-deepRose text-xs font-bold flex-shrink-0">
+                            🛒
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="text-xs font-bold text-textDark line-clamp-1">{item.name}</h4>
+                          <span className="text-[10px] text-textMuted font-medium">الكمية: {item.quantity}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-left font-mono text-xs font-black text-deepRose">
+                        {(item.unitPrice * item.quantity).toLocaleString('ar-SY')} ل.س
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="pt-3 border-t border-dashed border-pink-200 space-y-2">
               <div className="flex justify-between items-center text-xs text-textMuted font-medium">
@@ -293,16 +386,13 @@ export default function CheckoutPage() {
                 <span className="font-mono text-textDark">{totalAmountValue.toLocaleString('ar-SY')} ل.س</span>
               </div>
 
-              
-
               <div className="flex justify-between items-center pt-2 border-t border-pink-100">
                 <span className="text-sm font-black text-textDark">إجمالي الفاتورة النهائي:</span>
                 <span className="text-base font-black font-mono text-deepRose bg-pink-50/80 px-3 py-1 rounded-xl border border-pink-200/60">
                   {totalAmountValue.toLocaleString('ar-SY')} ل.س
                 </span>
-                
               </div>
-              <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 text-lg rounded-md text-[10px]">*  قد يترتب عليك  رسوم اجرة التوصيل</span>
+              <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 text-lg rounded-md text-[10px]">* قد يترتب عليك رسوم اجرة التوصيل</span>
             </div>
           </div>
 
@@ -450,7 +540,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* طرق الدفع */}
-          <div className="bg-white p-6 rounded-[28px] border border-pink-100 shadow-sm space-y-4">
+          <div className="bg-white p-6 rounded-[28px] border border-pink-100 space-y-4">
             <h2 className="font-black text-deepRose text-sm mb-2">طريقة الدفع</h2>
 
             <div className="space-y-3">
@@ -467,9 +557,9 @@ export default function CheckoutPage() {
                   />
                   <span className="font-bold text-sm text-textDark">Sham Cash</span>
                 </div>
-                <div className="relative h-12 w-24 rounded-xl overflow-hidden border border-pink-200/80 bg-pink-50 shadow-xs flex-shrink-0">
+                <div className="relative h-15 w-24 rounded-xl overflow-hidden flex-shrink-0">
                   <Image
-                    src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=250&auto=format&fit=crop&q=80"
+                    src="https://blltdhrwdgmuuydsqdxd.supabase.co/storage/v1/object/public/sham-cash/sham-cash.png"
                     alt="Sham Cash"
                     fill
                     unoptimized
@@ -491,9 +581,9 @@ export default function CheckoutPage() {
                   />
                   <span className="font-bold text-sm text-textDark">الدفع نقداً عند الاستلام</span>
                 </div>
-                <div className="relative h-12 w-24 rounded-xl overflow-hidden border border-pink-200/80 bg-pink-50 shadow-xs flex-shrink-0">
+                <div className="relative h-15 w-24 rounded-xl overflow-hidden flex-shrink-0">
                   <Image
-                    src="https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?w=250&auto=format&fit=crop&q=80"
+                    src="https://blltdhrwdgmuuydsqdxd.supabase.co/storage/v1/object/public/sham-cash/cod.png"
                     alt="Cash on Delivery"
                     fill
                     unoptimized
@@ -513,12 +603,12 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* تفاصيل شام كاش وإثبات التحويل */}
+            {/* تفاصيل شام كاش */}
             {paymentMethod === 'sham_cash' && (
-              <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-pink-50/70 to-white border border-pink-200/80 space-y-4 animate-fadeIn">
-                <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-pink-100 shadow-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-12 w-12 flex-shrink-0 bg-gray-50 rounded-lg p-1 border">
+              <div className="mt-4 rounded-3xl space-y-4 animate-fadeIn w-full">
+                <div className="w-full bg-white p-4 rounded-2xl border border-pink-100 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="relative h-24 w-24 flex-shrink-0 bg-gray-50 rounded-xl p-1 border border-pink-100">
                       <Image
                         src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ShamCash"
                         alt="QR Code"
@@ -527,19 +617,20 @@ export default function CheckoutPage() {
                         className="object-contain"
                       />
                     </div>
-                    <div>
-                      <span className="block text-[10px] text-textMuted">رمز الحساب للتحويل:</span>
-                      <span className="font-mono font-black text-xs text-deepRose">{shamCashNumber}</span>
+
+                    <div className="text-center pt-2 border-t border-pink-50 justify-center flex flex-col gap-1 flex-1">
+                      <span className="block text-[11px] text-textMuted mb-0.5">رمز الحساب للتحويل:</span>
+                      <span className="font-mono font-black text-sm text-deepRose tracking-wider">{shamCashNumber}</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyCode}
+                        className="w-full py-2.5 px-3 rounded-xl bg-deepRose text-white text-xs font-bold shadow-xs hover:bg-primaryRose transition flex items-center justify-center gap-2 mt-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <span>نسخ رمز الحساب</span>
+                      </button>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="px-3 py-1.5 rounded-lg bg-deepRose text-white text-xs font-bold shadow-xs hover:bg-primaryRose transition flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                    <span>نسخ الرمز</span>
-                  </button>
                 </div>
 
                 <div className="flex items-center justify-between bg-white/80 p-2.5 rounded-xl border border-pink-100">
@@ -636,8 +727,8 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full h-14 bg-gradient-to-l from-deepRose to-primaryRose text-white font-bold rounded-2xl hover:opacity-95 transition shadow-lg shadow-rose-900/15 flex items-center justify-center text-sm"
+            disabled={isLoading || (productId !== null && isProductLoading)}
+            className="w-full h-14 bg-gradient-to-l from-deepRose to-primaryRose text-white font-bold rounded-2xl hover:opacity-95 transition shadow-lg shadow-rose-900/15 flex items-center justify-center text-sm disabled:opacity-50"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -648,5 +739,13 @@ export default function CheckoutPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-deepRose font-bold">جاري التحميل...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

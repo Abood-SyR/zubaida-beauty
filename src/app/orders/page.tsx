@@ -1,7 +1,10 @@
+
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import lottie from 'lottie-web';
+import emptyAnimation from '@/assets/empty.json'; // تأكد أن ملف الـ empty.json موجود في مجلد الـ assets أو عدل المسار حسب رغبتك
 import { ApiService } from '@/services/api_client';
 
 const ORDERS_STORAGE_KEY = 'zubaida_my_orders_cache';
@@ -50,6 +53,25 @@ export default function MyOrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // مرجع لعنصر الـ Lottie Animation للطلبات الفارغة
+  const emptyAnimContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (orders.length === 0 && !isLoading && emptyAnimContainerRef.current) {
+      const anim = lottie.loadAnimation({
+        container: emptyAnimContainerRef.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: emptyAnimation,
+      });
+
+      return () => {
+        anim.destroy();
+      };
+    }
+  }, [orders.length, isLoading]);
 
   const fetchOrdersFromServer = useCallback(async (
     isManualRefresh = false,
@@ -158,33 +180,39 @@ export default function MyOrdersPage() {
 
   return (
     <main className="min-h-screen bg-lightPinkBg pb-16" dir="rtl">
-      {/* هيدر الصفحة مع زر التحديث اليدوي */}
+      {/* هيدر الصفحة: اليمين عودة للرئيسية، المنتصف طلباتي، اليسار زر التحديث (بدون الشعار) */}
       <header className="bg-surfaceWhite border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <Link href="/home" className="text-primaryRose text-sm font-semibold hover:underline">
-            ← العودة للرئيسية
+          
+          {/* اليمين: العودة للرئيسية */}
+          <Link href="/home" className="text-primaryRose text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1">
+            <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+            <span>الرئيسية</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-deepRose">طلباتي</h1>
-            <button
-              onClick={() => fetchOrdersFromServer(true)}
-              disabled={isRefreshing}
-              className="bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 flex items-center gap-1.5"
-              title="تحديث الطلبات"
-            >
-              <svg className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>تحديث</span>
-            </button>
-          </div>
-          <div className="w-16"></div>
+
+          {/* المنتصف: كلمة طلباتي */}
+          <h1 className="text-base sm:text-lg font-black text-deepRose">طلباتي</h1>
+
+          {/* اليسار: زر التحديث */}
+          <button
+            onClick={() => fetchOrdersFromServer(true)}
+            disabled={isRefreshing}
+            className="bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 flex items-center gap-1.5 cursor-pointer"
+            title="تحديث الطلبات"
+          >
+            <svg className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>تحديث</span>
+          </button>
+
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-4 space-y-4">
         {isLoading ? (
-          /* هيكل وهمي (Shimmer) للتحميل الأولي */
           <div className="space-y-4">
             {[1, 2, 3].map((n) => (
               <div key={n} className="bg-white rounded-3xl p-5 border border-pink-100 shadow-sm animate-pulse space-y-4">
@@ -201,9 +229,12 @@ export default function MyOrdersPage() {
             <p className="text-red-500 font-medium text-sm">{errorMessage}</p>
           </div>
         ) : orders.length === 0 ? (
-          <div className="text-center py-20 bg-surfaceWhite rounded-3xl border border-pink-100 shadow-sm">
-            <span className="text-6xl mb-4 block">📦</span>
-            <h2 className="text-lg font-bold text-gray-500">لا توجد طلبات سابقة حالياً</h2>
+          /* عرض حزمة الـ Lottie Animation المخصصة للفراغ */
+          <div className="text-center py-12 bg-surfaceWhite rounded-3xl border border-pink-100 shadow-sm flex flex-col items-center justify-center">
+            <div className="w-56 h-56 mx-auto flex items-center justify-center">
+              <div ref={emptyAnimContainerRef} className="w-full h-full object-contain" />
+            </div>
+            <h2 className="text-base font-bold text-gray-500 mt-2">لا توجد طلبات سابقة حالياً</h2>
           </div>
         ) : (
           <div className="space-y-3">

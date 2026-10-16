@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import lottie from 'lottie-web';
 import { CartItem, CartManager } from '@/services/cart_manager';
+import emptyAnimation from '@/assets/empty.json';
 
 const REMOVE_ACTION_WIDTH = 88;
 
@@ -100,6 +102,24 @@ export default function CartPage() {
   const didSwipe = useRef(false);
   const animatedFirstItem = useRef(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const emptyContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (items.length === 0 && emptyContainerRef.current) {
+      const anim = lottie.loadAnimation({
+        container: emptyContainerRef.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: emptyAnimation,
+      });
+
+      return () => {
+        anim.destroy();
+      };
+    }
+  }, [items.length]);
 
   const updateCartState = useCallback(() => {
     setItems([...cartManager.items]);
@@ -208,9 +228,9 @@ export default function CartPage() {
 
       <div className="mx-auto max-w-4xl space-y-3 px-4">
         {items.length === 0 ? (
-          <div className="rounded-3xl border border-pink-100 bg-surfaceWhite py-20 text-center shadow-sm">
-            <CartIcon className="mx-auto mb-4 h-16 w-16 text-textMuted" name="cart" />
-            <h2 className="text-lg font-bold text-textMuted">السلة فارغة حالياً</h2>
+          <div className="flex flex-col items-center justify-center rounded-3xl border border-pink-100 bg-surfaceWhite py-16 px-4 text-center shadow-sm">
+            <div ref={emptyContainerRef} className="w-48 h-48 sm:w-60 sm:h-60 mb-3" />
+            <h2 className="text-lg font-bold text-deepRose">السلة فارغة حالياً</h2>
           </div>
         ) : (
           items.map((item) => {

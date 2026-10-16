@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import lottie from 'lottie-web';
+import emptyAnimation from '@/assets/empty.json';
 import { ApiService } from '@/services/api_client';
 
 const ORDERS_STORAGE_KEY = 'zubaida_my_orders_cache';
@@ -14,6 +16,25 @@ export default function OrdersTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // مرجع لعنصر الـ Lottie Animation للطلبات الفارغة
+  const emptyAnimContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (orders.length === 0 && !isLoading && emptyAnimContainerRef.current) {
+      const anim = lottie.loadAnimation({
+        container: emptyAnimContainerRef.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: emptyAnimation,
+      });
+
+      return () => {
+        anim.destroy();
+      };
+    }
+  }, [orders.length, isLoading]);
 
   const fetchOrdersFromServer = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
@@ -53,7 +74,6 @@ export default function OrdersTab() {
       const isSynced = localStorage.getItem(SYNCED_FLAG_KEY);
       const cachedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
 
-      // إذا تمت المزامنة مسبقاً وتوجد بيانات مخزنة، يتم عرضها مباشرة دون إرسال أي طلب للسيرفر
       if (isSynced && cachedOrders) {
         try {
           const parsed = JSON.parse(cachedOrders);
@@ -66,7 +86,6 @@ export default function OrdersTab() {
           if (isActive) void fetchOrdersFromServer(false);
         }
       } else {
-        // أول دخول: يتم طلب الـ Endpoint من السيرفر
         if (isActive) void fetchOrdersFromServer(false);
       }
     };
@@ -107,7 +126,7 @@ export default function OrdersTab() {
         <button
           onClick={() => fetchOrdersFromServer(true)}
           disabled={isRefreshing}
-          className="bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 flex items-center gap-1.5"
+          className="bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 flex items-center gap-1.5 cursor-pointer"
           title="تحديث الطلبات"
         >
           <svg className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,9 +150,12 @@ export default function OrdersTab() {
           <p className="text-red-500 text-xs font-bold">{errorMessage}</p>
         </div>
       ) : orders.length === 0 ? (
-        <div className="bg-surfaceWhite rounded-3xl p-10 text-center border border-pink-100 shadow-sm space-y-2">
-          <span className="text-4xl block">📦</span>
-          <p className="text-xs font-bold text-gray-500">لا توجد طلبات سابقة حتى الآن.</p>
+        /* عرض ملف الـ Lottie Animation للطلبات الفارغة */
+        <div className="bg-surfaceWhite rounded-3xl p-10 text-center border border-pink-100 shadow-sm flex flex-col items-center justify-center space-y-2">
+          <div className="w-48 h-48 mx-auto flex items-center justify-center">
+            <div ref={emptyAnimContainerRef} className="w-full h-full object-contain" />
+          </div>
+          <p className="text-xs font-bold text-gray-500 mt-2">لا توجد طلبات سابقة حتى الآن.</p>
         </div>
       ) : (
         <div className="space-y-3">

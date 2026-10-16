@@ -4,7 +4,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast_provider';
 import { ApiService } from '@/services/api_client';
 
@@ -15,13 +14,12 @@ import NotificationsTab from '@/components/profile/NotificationsTab';
 const CACHE_KEY = 'zubaida_profile_cache_data';
 
 export default function ProfilePage() {
-  const router = useRouter();
   const showToast = useToast();
   const apiService = useMemo(() => new ApiService(), []);
 
   const [userData, setUserData] = useState<any>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [orders] = useState<any[]>([]);
+  const [notifications] = useState<any[]>([]);
 
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'notifications'>('profile');
   const [isLoading, setIsLoading] = useState(true);
@@ -48,8 +46,6 @@ export default function ProfilePage() {
           const parsed = JSON.parse(cached);
           if (parsed.userData && isMounted) {
             setUserData(parsed.userData);
-            setOrders(parsed.orders || []);
-            setNotifications(parsed.notifications || []);
             setIsLoading(false);
             return;
           }
@@ -104,15 +100,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('token');
-      localStorage.removeItem(CACHE_KEY);
-      router.push('/auth/login');
-    }
-  };
-
   if (isLoading) {
     return (
       <main className="min-h-screen bg-[#FFF5F7] pb-16 relative" dir="rtl">
@@ -120,7 +107,7 @@ export default function ProfilePage() {
           <div className="max-w-xl mx-auto flex justify-between items-center">
             <div className="h-4 bg-pink-100 rounded-full w-16 animate-pulse"></div>
             <div className="h-5 bg-pink-100 rounded-full w-24 animate-pulse"></div>
-            <div className="h-4 bg-pink-100 rounded-full w-10 animate-pulse"></div>
+            <div className="w-10"></div>
           </div>
         </header>
 
@@ -157,6 +144,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#FFF5F7] pb-16 relative" dir="rtl">
       
+      {/* الهيدر العلوي: يحتوي على زر العودة للرئيسية وعنوان الصفحة فقط */}
       <header className="bg-white border-b border-pink-100 px-6 py-4 sticky top-0 z-40 shadow-xs">
         <div className="max-w-xl mx-auto flex justify-between items-center">
           <Link href="/home" className="inline-flex items-center gap-1.5 text-xs font-bold text-deepRose hover:scale-105 transition">
@@ -166,15 +154,14 @@ export default function ProfilePage() {
             <span>الرئيسية</span>
           </Link>
           <h1 className="text-base font-black text-deepRose">الملف الشخصي</h1>
-          <button onClick={handleLogout} className="text-xs font-bold text-red-500 hover:opacity-80 transition">
-            خروج
-          </button>
+          <div className="w-10"></div> {/* عنصر فارغ لموازنة العنوان بالمنتصف */}
         </div>
       </header>
 
       <div className="max-w-xl mx-auto px-4 pt-6 relative z-10 space-y-6">
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm text-center relative border border-pink-100">
+        {/* بطاقة معلومات الحساب */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm text-center border border-pink-100">
           <div className="relative w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden shadow-sm bg-pink-50 flex items-center justify-center">
             {userData?.avatar_url ? (
               <Image src={userData.avatar_url} alt="Profile Avatar" fill className="object-cover" />
@@ -193,27 +180,29 @@ export default function ProfilePage() {
           </p>
         </div>
 
+        {/* أزرار التبديل بين التبويبات */}
         <div className="grid grid-cols-3 gap-1.5 bg-white p-1.5 rounded-2xl shadow-xs border border-pink-100">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`py-2 text-[11px] font-black rounded-xl transition ${activeTab === 'profile' ? 'bg-deepRose text-white shadow-sm' : 'text-textDark/70 hover:bg-pink-50'}`}
+            className={`py-2 text-[11px] font-black rounded-xl transition cursor-pointer ${activeTab === 'profile' ? 'bg-deepRose text-white shadow-sm' : 'text-textDark/70 hover:bg-pink-50'}`}
           >
             حسابي
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`py-2 text-[11px] font-black rounded-xl transition ${activeTab === 'orders' ? 'bg-deepRose text-white shadow-sm' : 'text-textDark/70 hover:bg-pink-50'}`}
+            className={`py-2 text-[11px] font-black rounded-xl transition cursor-pointer ${activeTab === 'orders' ? 'bg-deepRose text-white shadow-sm' : 'text-textDark/70 hover:bg-pink-50'}`}
           >
-            طلباتي ({orders.length})
+            طلباتي 
           </button>
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`py-2 text-[11px] font-black rounded-xl transition ${activeTab === 'notifications' ? 'bg-deepRose text-white shadow-sm' : 'text-textDark/70 hover:bg-pink-50'}`}
+            className={`py-2 text-[11px] font-black rounded-xl transition cursor-pointer ${activeTab === 'notifications' ? 'bg-deepRose text-white shadow-sm' : 'text-textDark/70 hover:bg-pink-50'}`}
           >
             الإشعارات
           </button>
         </div>
 
+        {/* عرض التبويب المختار */}
         {activeTab === 'profile' && <ProfileTab userData={userData} onUpdate={handleProfileUpdate} />}
         {activeTab === 'orders' && <OrdersTab />}
         {activeTab === 'notifications' && <NotificationsTab notifications={notifications} />}

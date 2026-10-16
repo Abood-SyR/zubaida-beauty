@@ -1,9 +1,12 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-hooks/immutability */
+/* eslint-disable react-hooks/set-state-in-effect */
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Product, parseProductFromJson } from '@/models/product';
 import { HomeService } from '@/services/home_service';
 import { ProductService } from '@/services/product_service';
@@ -12,7 +15,6 @@ import { CartManager } from '@/services/cart_manager';
 import { FilterSaveService } from '@/services/filter_save_service';
 import { useToast } from '@/components/ui/toast_provider';
 
-// استدعاء الأقسام الفرعية الموجودة داخل مجلد الصفحات الرئيسي
 import OffersBannerSection from '@/app/home/sections/offers_banner_section';
 import SectionsScreen from '@/app/home/sections/sections_screen';
 import CollectionsSection from '@/app/home/sections/collections_section';
@@ -42,7 +44,7 @@ interface OfferItem {
   is_star?: boolean;
   end_date?: string | null;
   products?: Product[];
-  [key: string]: unknown; // <-- إضافة هذا السطر لحل مشكلة الـ Index Signature
+  [key: string]: unknown;
 }
 
 interface GroupItem {
@@ -60,11 +62,12 @@ interface GroupItem {
   created_at?: string | null;
   updated_at?: string | null;
   products?: Product[];
-  [key: string]: unknown; // <-- إضافة هذا السطر لحل المشكلة
+  [key: string]: unknown;
 }
 
-export default function HomeScreen() {
+export default function HomeClientView() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const productService = new ProductService();
   const cartManager = CartManager.getInstance();
@@ -93,28 +96,26 @@ export default function HomeScreen() {
     selectedCategories.length > 0 ||
     sortBy !== 'newest';
 
+  // --- منطق الحماية: التحقق من تسجيل الدخول وإكمال الملف الشخصي ---
   useEffect(() => {
-    loadHomeData();
-    cartManager.loadFromStorage();
-    Promise.resolve()
-      .then(() => {
-        setRecentSearches(FilterSaveService.loadRecentSearches());
-        setFavoritesMap(
-          Object.fromEntries(favoriteService.getLocalFavoriteIds().map((id) => [id, true])),
-        );
-        return favoriteService.getFavorites();
-      })
-      .then((items) => {
-        setFavoritesMap(Object.fromEntries(items.map((item) => [String(item.id), true])));
-      })
-      .catch((error) => {
-        console.error('Error loading favorites:', error);
-      });
-  }, []);
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      const profileCompleted = localStorage.getItem('profile_completed');
 
-  const loadHomeData = async () => {
-    setIsLoading(true);
-    setIsSuggestedProductsLoading(true);
+      // إذا كان المستخدم مسجل دخوله (لديه توكن) ولم يكمل ملفه الشخصي، نمسكه فوراً ونعيده
+      if (token && profileCompleted !== 'true') {
+        router.push('/auth/complete-profile');
+      }
+    }
+  }, [router]);
+
+  const loadHomeData = useCallback(async (setLoading = true) => {
+    if (setLoading) {
+      queueMicrotask(() => {
+        setIsLoading(true);
+        setIsSuggestedProductsLoading(true);
+      });
+    }
     try {
       const homeData = await HomeService.getHomeDashboard();
       
@@ -134,15 +135,15 @@ export default function HomeScreen() {
       setTrendingKeywords(keywords);
       setSuggestedProducts(suggestedProds);
     } catch (e) {
-      console.error('❌ Error loading home data:', e);
+      console.error('Error loading home data:', e);
     } finally {
       setIsLoading(false);
       setIsSuggestedProductsLoading(false);
     }
-  };
+  }, []);
 
-  const filterProducts = async (query: string, catId: string, sort: string) => {
-    setIsLoading(true);
+  const filterProducts = useCallback(async (query: string, catId: string, sort: string) => {
+    queueMicrotask(() => setIsLoading(true));
     try {
       const prodsData = await productService.getProducts({
         search: query,
@@ -151,11 +152,30 @@ export default function HomeScreen() {
       });
       setProducts(prodsData.map((product) => parseProductFromJson({ ...product })));
     } catch (e) {
-      console.error('❌ Error filtering products:', e);
+      console.error('Error filtering products:', e);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [productService]);
+
+  useEffect(() => {
+    loadHomeData(false);
+    cartManager.loadFromStorage();
+    Promise.resolve()
+      .then(() => {
+        setRecentSearches(FilterSaveService.loadRecentSearches());
+        setFavoritesMap(
+          Object.fromEntries(favoriteService.getLocalFavoriteIds().map((id) => [id, true])),
+        );
+        return favoriteService.getFavorites();
+      })
+      .then((items) => {
+        setFavoritesMap(Object.fromEntries(items.map((item) => [String(item.id), true])));
+      })
+      .catch((error) => {
+        console.error('Error loading favorites:', error);
+      });
+  }, [loadHomeData, cartManager]);
 
   const handleProductSelected = (query = searchQuery) => {
     const normalizedQuery = query.trim();
@@ -169,12 +189,29 @@ export default function HomeScreen() {
       if (hasActiveSearchOrFilters) {
         filterProducts(searchQuery, selectedCategories[0] || '', sortBy);
       } else {
-        loadHomeData();
+        loadHomeData(true);
       }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategories, sortBy]);
+  }, [searchQuery, selectedCategories, sortBy, hasActiveSearchOrFilters, filterProducts, loadHomeData]);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'شركة زُبيدة بيوتي',
+          text: 'اكتشفي أرقى منتجات التجميل والعناية المصنعة محلياً في شركة زُبيدة بيوتي',
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('تم نسخ رابط المتجر بنجاح');
+    }
+  };
 
   const handleToggleFavorite = async (product: Product) => {
     const productId = product.id;
@@ -198,13 +235,43 @@ export default function HomeScreen() {
 
   return (
     <main className="min-h-screen bg-lightPinkBg pb-16" dir="rtl">
-      <header className="sticky top-0 z-40 bg-surfaceWhite/80 backdrop-blur-md border-b border-pink-100 px-4 py-4 mb-6 shadow-sm">
-        <div className="max-w-7xl mx-auto flex justify-center items-center">
-          <h1 className="text-xl font-bold text-deepRose">Zubaida Beauty</h1>
+      <header className="sticky top-0 z-40 bg-surfaceWhite/75 backdrop-blur-xl border-b border-white/40 px-4 py-3 mb-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/help/contact"
+              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
+            >
+              اتصل بنا
+            </Link>
+            <Link
+              href="/help/faq"
+              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
+            >
+              حول زبيدة بيوتي
+            </Link>
+            <button
+              onClick={handleShare}
+              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors cursor-pointer"
+            >
+              مشاركة
+            </button>
+          </div>
+
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="شركة زُبيدة بيوتي"
+              width={90}
+              height={61}
+              className="object-contain h-9 w-auto"
+              priority
+            />
+          </Link>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-4">
         <SearchSection 
           categories={categories}
           selectedCategories={selectedCategories}

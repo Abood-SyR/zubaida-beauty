@@ -71,7 +71,7 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
 
   if (isLoading) {
     return (
-      <div className="py-2">
+      <div className="py-1">
         <div className="flex gap-4 overflow-x-auto px-4 scrollbar-none">
           {[1, 2].map((item) => (
             <div key={item} className="shimmer h-[150px] w-[min(60.8vw,288px)] flex-shrink-0 rounded-[28px] sm:w-[min(76vw,360px)]" />
@@ -84,7 +84,7 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
   if (!allOffers.length) return null;
 
   return (
-    <section className="py-2">
+    <section className="py-1">
       <svg aria-hidden="true" className="offer-wave-defs">
         <defs>
           <clipPath id={clipId} clipPathUnits="objectBoundingBox">
@@ -92,7 +92,8 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
           </clipPath>
         </defs>
       </svg>
-      <div className="flex overflow-x-auto gap-4 px-4 pb-2 scrollbar-none">
+      {/* تم جعل pb-0 لإزالة الفراغ السفلي بالكامل */}
+      <div className="flex overflow-x-auto gap-4 px-4 pb-0 scrollbar-none">
         {allOffers.map((offer, index) => {
           const offerType = typeof offer['offer_type'] === 'string' ? offer['offer_type'] : 'single_discount';
           const titleValue = offer['title'];
@@ -134,7 +135,6 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
             freeProduct?.['id'] == null ? undefined : String(freeProduct['id'])
           );
           
-          // تصفية المنتجات الأساسية بحد أقصى 3 منتجات
           const mainProducts = products.filter(
             (product, productIndex) =>
               productIndex !== freeProductIndex &&
@@ -156,7 +156,6 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
               }`}
               style={{ clipPath: `url(#${clipId})` }}
             >
-              {/* قسم عرض المنتجات (أساسية + هدية ليصبح المجموع حتى 4 منتجات في المنتصف) */}
               <div className="relative h-full flex-none w-[44%] flex items-end justify-center">
                 <div className="relative flex items-end justify-center h-full w-full">
                   {displayedMainProducts.length === 1 && !hasFreeGift ? (
@@ -167,7 +166,6 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                     </div>
                   ) : (
                     (() => {
-                      // دمج المنتجات الأساسية مع الهدية إن وجدت (إجمالي حتى 4 منتجات)
                       const allDisplayItems: { product: OfferProduct; isGift: boolean }[] = [
                         ...displayedMainProducts.map((p) => ({ product: p, isGift: false })),
                       ];
@@ -183,7 +181,6 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                         let zIdx = 'z-20';
 
                         if (totalCount === 4) {
-                          // توزيع 4 منتجات (أساسية + هدية) بشكل متناسق في المنتصف
                           if (idx === 0) { rotation = '-rotate-12'; translate = '-translate-x-9'; zIdx = 'z-10'; }
                           else if (idx === 1) { rotation = '-rotate-4'; translate = '-translate-x-3'; zIdx = 'z-20'; }
                           else if (idx === 2) { rotation = 'rotate-4'; translate = 'translate-x-3'; zIdx = 'z-25'; }
@@ -207,7 +204,6 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                               <OfferProductImage product={item.product} title={item.isGift ? 'هدية العرض' : title} />
                             </div>
 
-                            {/* شارة هدية ملتصقة تماماً على رأس يسار الحاوية بشكل مائل */}
                             {item.isGift && (
                               <span className="absolute -top-1.5 -left-1.5 z-40 rotate-[-15deg] rounded bg-red-500 px-1 py-0.5 text-[7px] font-black text-white shadow-md">
                                 هدية
@@ -221,7 +217,6 @@ export default function OffersBannerSection({ offers, isLoading }: OffersBannerS
                 </div>
               </div>
 
-              {/* تفاصيل العرض والأسعار */}
               <div className="flex min-w-0 flex-1 flex-col justify-center px-2 z-20">
                 <span
                   className={`mb-1 inline-flex w-fit items-center gap-1 rounded-md bg-deepRose px-2 py-0.5 text-[9px] font-bold text-white shadow-sm transition-transform duration-1000 ${

@@ -264,7 +264,7 @@ export default function OrderDetailPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleWhatsAppInquiry}
-              className="flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-emerald-100"
+              className="flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-emerald-100 cursor-pointer"
               title="استفسار عبر واتساب"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +275,7 @@ export default function OrderDetailPage() {
 
             <button
               onClick={handleShare}
-              className="flex items-center gap-1 bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 relative"
+              className="flex items-center gap-1 bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 relative cursor-pointer"
               title="مشاركة الطلب"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,7 +404,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* عناصر الطلب مع صور المنتجات */}
+        {/* عناصر الطلب مع صور المنتجات باستخدام Next.js Image */}
         <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-deepRose font-black text-xs border-b border-pink-100 pb-3">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,7 +429,14 @@ export default function OrderDetailPage() {
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="relative w-14 h-14 rounded-xl bg-white border border-pink-100 overflow-hidden shrink-0 flex items-center justify-center">
                       {imgUrl ? (
-                        <Image src={imgUrl} alt={productName} fill sizes="56px" className="object-cover" unoptimized />
+                        <Image 
+                          src={imgUrl} 
+                          alt={productName} 
+                          fill 
+                          sizes="56px" 
+                          className="object-cover" 
+                          unoptimized 
+                        />
                       ) : (
                         <span className="text-[10px] text-deepRose font-bold">صورة</span>
                       )}

@@ -47,6 +47,39 @@ function remainingTime(endDate: string | undefined, now: number): string {
   return 'ينتهي قريباً';
 }
 
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  try {
+    const offerId = String(params?.id ?? '');
+    const offer = await OfferService.getOfferById(offerId);
+    const title = localizedText(offer?.['title'], 'عرض خاص');
+    const description = localizedText(offer?.['description'], title);
+    const products = Array.isArray(offer?.['products']) ? offer['products'].filter(isOfferProduct) : [];
+    const imageUrl = products.length > 0 ? imageSource(products[0]) : '';
+
+    return {
+      title: `${title} - زُبيدة بيوتي`,
+      description: description,
+      openGraph: {
+        title: `${title} - زُبيدة بيوتي`,
+        description: description,
+        url: `https://zubaidabeauty.com/offer/${offerId}`,
+        images: imageUrl ? [{ url: imageUrl }] : [],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${title} - زُبيدة بيوتي`,
+        description: description,
+        images: imageUrl ? [imageUrl] : [],
+      },
+    };
+  } catch {
+    return {
+      title: 'تفاصيل العرض - زُبيدة بيوتي',
+      description: 'متجر زُبيدة بيوتي للعناية والتجميل',
+    };
+  }
+}
+
 export default function OfferDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -73,20 +106,22 @@ export default function OfferDetailPage() {
       })
       .catch((fetchError: unknown) => {
         if (isCurrent) {
+          const errorMessage = fetchError instanceof Error
+            ? fetchError.message
+            : 'تعذر تحميل تفاصيل العرض. يرجى المحاولة مرة أخرى.';
           setRequestError({
             id: offerId,
             attempt: reloadKey,
-            message: fetchError instanceof Error
-              ? fetchError.message
-              : 'تعذر تحميل تفاصيل العرض. يرجى المحاولة مرة أخرى.',
+            message: errorMessage,
           });
+          showToast(errorMessage, 'error');
         }
       });
 
     return () => {
       isCurrent = false;
     };
-  }, [offerId, reloadKey]);
+  }, [offerId, reloadKey, showToast]);
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);
@@ -182,7 +217,6 @@ export default function OfferDetailPage() {
   const savings = initialPrice ? initialPrice - finalPrice : 0;
   const isBundle = offer['offer_type'] === 'bundle';
   const safeImageIndex = galleryImages.length ? activeImageIndex % galleryImages.length : 0;
-  const isGiftImage = safeImageIndex >= mainProducts.length;
   const activeImage = galleryImages[safeImageIndex];
   const activeImageUrl = imageSource(activeImage);
 
@@ -191,12 +225,29 @@ export default function OfferDetailPage() {
     setActiveImageIndex((current) => (current + step + galleryImages.length) % galleryImages.length);
   };
 
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: title,
+          text: description || title,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast('تم نسخ رابط العرض إلى الحافظة', 'success');
+      }
+    } catch (shareError) {
+      console.error('Error sharing offer:', shareError);
+    }
+  };
+
   const handleAddToCart = () => {
     setIsAddingToCart(true);
     try {
       cartManager.loadFromStorage();
       cartManager.addOffer(offer);
-      showToast('تمت إضافة العرض إلى السلة');
+      showToast('تمت إضافة العرض إلى السلة بنجاح', 'success');
     } catch (addError: unknown) {
       console.error('Failed to add offer to cart:', addError);
       showToast('تعذرت إضافة العرض إلى السلة', 'error');
@@ -213,7 +264,7 @@ export default function OfferDetailPage() {
 
   const handleWhatsApp = () => {
     const message = encodeURIComponent(`مرحباً، أود الاستفسار عن العرض: ${title}`);
-    window.open(`https://wa.me/963981082693?text=${message}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/+963981082693?text=${message}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -223,13 +274,17 @@ export default function OfferDetailPage() {
           <Link href="/home" className="rounded-full bg-pink-50 px-4 py-2 text-sm font-bold text-primaryRose transition hover:bg-pink-100">
             ← العودة للمتجر
           </Link>
-          <div className="text-center">
-            <span className="block text-[10px] font-semibold tracking-[0.24em] text-primaryRose">ZUBAIDA BEAUTY</span>
-            <h1 className="mt-0.5 text-sm font-black text-deepRose sm:text-base">تفاصيل العرض</h1>
-          </div>
-          <Link href="/cart" aria-label="سلة المشتريات" className="flex h-10 w-10 items-center justify-center rounded-full border border-pink-100 bg-white text-lg shadow-sm transition hover:-translate-y-0.5">
-            🛍️
-          </Link>
+          <h1 className="text-sm font-black text-deepRose sm:text-base">{title}</h1>
+          <button
+            type="button"
+            onClick={handleShare}
+            aria-label="مشاركة العرض"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-pink-100 bg-white text-gray-600 shadow-sm transition hover:-translate-y-0.5"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -250,13 +305,10 @@ export default function OfferDetailPage() {
                 }
               }}
             >
-              <div className="absolute right-7 top-7 z-10 flex items-center gap-2 rounded-full border border-white/70 bg-white/85 px-4 py-2 text-xs font-bold text-deepRose shadow-lg backdrop-blur">
-                <span aria-hidden="true">✦</span>
-                {isBundle ? (hasFreeGift ? 'باقة مع هدية' : 'باقة مختارة') : 'عرض لفترة محدودة'}
-              </div>
+              
 
               {activeImageUrl ? (
-                <div key={activeImageIndex} className="offer-detail-image absolute inset-14 bottom-12 sm:inset-20 sm:bottom-16">
+                <div key={activeImageIndex} className="absolute inset-14 bottom-12 sm:inset-20 sm:bottom-16">
                   <Image
                     src={activeImageUrl}
                     alt={localizedText(activeImage['name'], title)}
@@ -268,16 +320,12 @@ export default function OfferDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="absolute inset-14 flex items-center justify-center rounded-[28px] bg-white/50 text-7xl sm:inset-20">
-                  🎀
+                <div className="absolute inset-14 flex items-center justify-center rounded-[28px] bg-white/50 text-sm text-gray-400 sm:inset-20">
+                  لا توجد صور
                 </div>
               )}
 
-              {isGiftImage && (
-                <span className="absolute bottom-7 right-7 z-10 rounded-full bg-red-500 px-4 py-2 text-xs font-black text-white shadow-lg">
-                  هدية مجانية 🎁
-                </span>
-              )}
+              
 
               {galleryImages.length > 1 && (
                 <>
@@ -328,10 +376,10 @@ export default function OfferDetailPage() {
                         className="object-contain"
                       />
                     ) : (
-                      <span className="flex h-full items-center justify-center">🎀</span>
+                      <span className="flex h-full items-center justify-center text-xs">صورة</span>
                     )}
                     {index >= mainProducts.length && (
-                      <span className="absolute inset-x-0 bottom-0 bg-red-500/90 py-0.5 text-[9px] font-bold text-white">هدية</span>
+                      <span className="absolute inset-x-0 bottom-0 bg-red-500/90 py-0.5 text-[9px] font-bold text-white text-center">هدية</span>
                     )}
                   </button>
                 ))}
@@ -344,7 +392,7 @@ export default function OfferDetailPage() {
             <div className="relative">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-deepRose px-4 py-2 text-xs font-bold text-white shadow-sm">
-                  {isBundle ? (hasFreeGift ? 'عرض الهدية' : 'باقة خاصة') : 'عرض حصري'}
+                  {isBundle ? (hasFreeGift ? 'مع هدية' : 'باقة خاصة') : 'عرض حصري'}
                 </span>
                 {actualDiscount != null && actualDiscount > 0 && (
                   <span className="rounded-full bg-rose-50 px-4 py-2 text-xs font-black text-primaryRose">
@@ -352,7 +400,6 @@ export default function OfferDetailPage() {
                   </span>
                 )}
                 <span className="mr-auto flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">
-                  <span aria-hidden="true">◷</span>
                   {remainingTime(
                     typeof offer['end_date'] === 'string' ? offer['end_date'] : undefined,
                     now,
@@ -384,7 +431,6 @@ export default function OfferDetailPage() {
                 </div>
                 {savings > 0 && (
                   <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
-                    <span aria-hidden="true">✓</span>
                     وفّري {formatPrice(savings)} عند اختيار هذا العرض
                   </div>
                 )}
@@ -410,11 +456,6 @@ export default function OfferDetailPage() {
                   </div>
                 </div>
               )}
-
-              <div className="mt-6 flex items-center gap-2 rounded-2xl bg-[#fff8fb] px-4 py-3 text-xs leading-6 text-textMuted">
-                <span className="text-lg" aria-hidden="true">♡</span>
-                منتجات مختارة بعناية لتمنحك تجربة عناية متكاملة.
-              </div>
             </div>
           </section>
         </div>
@@ -428,7 +469,9 @@ export default function OfferDetailPage() {
             aria-label="الاستفسار عبر واتساب"
             className="flex h-12 w-12 flex-none items-center justify-center rounded-2xl bg-emerald-50 text-xl text-emerald-700 transition hover:bg-emerald-100 sm:h-14 sm:w-auto sm:gap-2 sm:px-4 sm:text-sm sm:font-bold"
           >
-            <span aria-hidden="true">☏</span>
+            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+            </svg>
             <span className="hidden sm:inline">واتساب</span>
           </button>
           <button
@@ -457,10 +500,11 @@ function OfferProductRow({ product, isGift }: { product: OfferProduct; isGift: b
   const imageUrl = imageSource(product);
   const description = localizedText(product['description']);
   const price = numberValue(product['price']);
+  const productId = product['id'];
 
-  return (
-    <div className={`flex items-center gap-3 rounded-2xl border p-2.5 ${
-      isGift ? 'border-emerald-100 bg-emerald-50/70' : 'border-pink-100 bg-[#fffafd]'
+  const content = (
+    <div className={`flex items-center gap-3 rounded-2xl border p-2.5 transition ${
+      isGift ? 'border-emerald-100 bg-emerald-50/70' : 'border-pink-100 bg-[#fffafd] hover:border-pink-200'
     }`}>
       <div className="relative h-14 w-14 flex-none overflow-hidden rounded-xl bg-white shadow-sm">
         {imageUrl ? (
@@ -473,12 +517,12 @@ function OfferProductRow({ product, isGift }: { product: OfferProduct; isGift: b
             className="object-contain p-1"
           />
         ) : (
-          <span className="flex h-full items-center justify-center text-xl">🎀</span>
+          <span className="flex h-full items-center justify-center text-xs text-gray-400">صورة</span>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <h4 className={`truncate text-xs font-bold ${isGift ? 'text-emerald-900' : 'text-textDark'}`}>
-          {isGift ? `هدية مجانية · ${name}` : name}
+          {isGift ? ` ${name}` : name}
         </h4>
         {description && <p className="mt-1 line-clamp-1 text-[10px] text-textMuted">{description}</p>}
       </div>
@@ -487,6 +531,16 @@ function OfferProductRow({ product, isGift }: { product: OfferProduct; isGift: b
       </span>
     </div>
   );
+
+  if (productId != null) {
+    return (
+      <Link href={`/product/${productId}`} className="block transition hover:opacity-95">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 function isOfferProduct(value: unknown): value is OfferProduct {
