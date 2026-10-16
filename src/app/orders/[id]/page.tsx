@@ -2,6 +2,9 @@
 
 'use client';
 
+// أضف هذا السطر لحل مشكلة الـ Prerender وبناء الإنتاج بشكل نهائي
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
@@ -159,6 +162,7 @@ export default function OrderDetailPage() {
   };
 
   const handleShare = async () => {
+    if (!orderId) return;
     const shareData = {
       title: `تفاصيل الطلب #${orderId.substring(0, 8)}`,
       text: `تابع تفاصيل طلبك من زبيدة بيوتي`,
@@ -179,6 +183,7 @@ export default function OrderDetailPage() {
   };
 
   const handleWhatsAppInquiry = () => {
+    if (!orderId) return;
     const shortId = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
     const text = encodeURIComponent(`مرحباً، لدي استفسار بخصوص الطلب رقم #${shortId}`);
     window.open(`https://wa.me/+963981082693?text=${text}`, '_blank');
@@ -186,8 +191,8 @@ export default function OrderDetailPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-lightPinkBg pb-16" dir="rtl">
-        <header className="bg-surfaceWhite border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40">
+      <main className="min-h-screen bg-[#FFF0F5] pb-16" dir="rtl">
+        <header className="bg-[#FFFFFF] border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40">
           <div className="max-w-3xl mx-auto flex justify-between items-center">
             <div className="h-4 bg-pink-100 rounded-full w-24 animate-pulse"></div>
             <div className="h-6 bg-pink-100 rounded-full w-36 animate-pulse"></div>
@@ -218,15 +223,15 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <main className="min-h-screen bg-lightPinkBg flex items-center justify-center p-4" dir="rtl">
-        <div className="text-center bg-surfaceWhite p-8 rounded-3xl border border-pink-100 shadow-sm max-w-sm w-full space-y-4">
+      <main className="min-h-screen bg-[#FFF0F5] flex items-center justify-center p-4" dir="rtl">
+        <div className="text-center bg-[#FFFFFF] p-8 rounded-3xl border border-pink-100 shadow-sm max-w-sm w-full space-y-4">
           <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
           </div>
-          <h2 className="text-base font-bold text-textDark">لم يتم العثور على تفاصيل الطلب</h2>
-          <Link href="/orders" className="inline-block w-full bg-deepRose text-white font-bold py-3 rounded-2xl shadow-md text-xs">
+          <h2 className="text-base font-bold text-[#2D1520]">لم يتم العثور على تفاصيل الطلب</h2>
+          <Link href="/orders" className="inline-block w-full bg-[#880E4F] text-white font-bold py-3 rounded-2xl shadow-md text-xs">
             العودة لقائمة الطلبات
           </Link>
         </div>
@@ -234,7 +239,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const shortId = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
+  const shortId = orderId && orderId.length > 8 ? orderId.substring(0, 8) : (orderId || '');
   const items = Array.isArray(order.items) ? order.items : [];
   const currentStep = getStatusStep(order.status);
 
@@ -250,11 +255,10 @@ export default function OrderDetailPage() {
     : '';
 
   return (
-    <main className="min-h-screen bg-lightPinkBg pb-16" dir="rtl">
-      {/* هيدر الصفحة مع أزرار المشاركة والواتساب */}
-      <header className="bg-surfaceWhite border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40">
+    <main className="min-h-screen bg-[#FFF0F5] pb-16" dir="rtl">
+      <header className="bg-[#FFFFFF] border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40">
         <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <Link href="/orders" className="text-primaryRose text-sm font-semibold hover:underline flex items-center gap-1">
+          <Link href="/orders" className="text-[#D81B60] text-sm font-semibold hover:underline flex items-center gap-1">
             <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
             </svg>
@@ -275,7 +279,7 @@ export default function OrderDetailPage() {
 
             <button
               onClick={handleShare}
-              className="flex items-center gap-1 bg-pink-50 text-deepRose border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 relative cursor-pointer"
+              className="flex items-center gap-1 bg-pink-50 text-[#880E4F] border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-pink-100 relative cursor-pointer"
               title="مشاركة الطلب"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +287,7 @@ export default function OrderDetailPage() {
               </svg>
               <span>مشاركة</span>
               {copySuccess && (
-                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-textDark text-white text-[10px] px-2 py-0.5 rounded shadow">
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-[#2D1520] text-white text-[10px] px-2 py-0.5 rounded shadow">
                   تم النسخ
                 </span>
               )}
@@ -293,29 +297,26 @@ export default function OrderDetailPage() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 space-y-5">
-        
-        {/* معلومات الطلب والتاريخ */}
-        <div className="bg-surfaceWhite p-5 rounded-3xl border border-pink-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="bg-[#FFFFFF] p-5 rounded-3xl border border-pink-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-base font-black text-deepRose">تفاصيل الطلب #{shortId}</h1>
+            <h1 className="text-base font-black text-[#880E4F]">تفاصيل الطلب #{shortId}</h1>
             {formattedDate && (
               <p className="text-xs text-gray-400 mt-1">تاريخ الطلب: {formattedDate}</p>
             )}
           </div>
-          <span className="text-xs font-bold text-deepRose bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
+          <span className="text-xs font-bold text-[#880E4F] bg-pink-50 px-3 py-1 rounded-full border border-pink-100">
             {translateStatus(order.status)}
           </span>
         </div>
 
-        {/* شريط تتبع حالة الطلب المرئي */}
         {order.status !== 'cancelled' ? (
-          <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-4">
-            <span className="text-xs font-black text-textDark block">تتبع حالة الطلب</span>
+          <div className="bg-[#FFFFFF] p-6 rounded-3xl border border-pink-100 shadow-sm space-y-4">
+            <span className="text-xs font-black text-[#2D1520] block">تتبع حالة الطلب</span>
 
             <div className="relative py-2">
               <div className="absolute top-1/2 left-4 right-4 h-1 bg-pink-100 -translate-y-1/2 z-0"></div>
               <div 
-                className="absolute top-1/2 right-4 h-1 bg-deepRose -translate-y-1/2 z-0 transition-all duration-500"
+                className="absolute top-1/2 right-4 h-1 bg-[#880E4F] -translate-y-1/2 z-0 transition-all duration-500"
                 style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
               ></div>
 
@@ -332,13 +333,13 @@ export default function OrderDetailPage() {
                       <div 
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition font-black ${
                           isDone 
-                            ? 'bg-deepRose text-white shadow-md ring-4 ring-pink-100' 
+                            ? 'bg-[#880E4F] text-white shadow-md ring-4 ring-pink-100' 
                             : 'bg-white text-gray-400 border border-pink-200'
                         }`}
                       >
                         {s.step}
                       </div>
-                      <span className={`text-[10px] font-bold ${isDone ? 'text-deepRose' : 'text-gray-400'}`}>
+                      <span className={`text-[10px] font-bold ${isDone ? 'text-[#880E4F]' : 'text-gray-400'}`}>
                         {s.label}
                       </span>
                     </div>
@@ -353,16 +354,15 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* معلومات التوصيل والعنوان */}
-        <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 text-deepRose font-black text-xs border-b border-pink-100 pb-3">
+        <div className="bg-[#FFFFFF] p-6 rounded-3xl border border-pink-100 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-[#880E4F] font-black text-xs border-b border-pink-100 pb-3">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
             <span>معلومات التوصيل والعنوان</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-textDark">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#2D1520]">
             {recipientName && (
               <div className="bg-pink-50/50 p-3 rounded-2xl border border-pink-100">
                 <span className="text-gray-400 block text-[10px]">الاسم:</span>
@@ -382,9 +382,8 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* تفاصيل الدفع */}
-        <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 text-deepRose font-black text-xs border-b border-pink-100 pb-3">
+        <div className="bg-[#FFFFFF] p-6 rounded-3xl border border-pink-100 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-[#880E4F] font-black text-xs border-b border-pink-100 pb-3">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
             </svg>
@@ -393,7 +392,7 @@ export default function OrderDetailPage() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="bg-pink-50/50 p-3 rounded-2xl border border-pink-100">
               <span className="text-gray-400 block text-[10px]">طريقة الدفع:</span>
-              <span className="font-bold text-textDark">{translatePaymentMethod(order.payment_method)}</span>
+              <span className="font-bold text-[#2D1520]">{translatePaymentMethod(order.payment_method)}</span>
             </div>
             <div className="bg-pink-50/50 p-3 rounded-2xl border border-pink-100">
               <span className="text-gray-400 block text-[10px]">حالة الدفع:</span>
@@ -404,9 +403,8 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* عناصر الطلب مع صور المنتجات باستخدام Next.js Image */}
-        <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-deepRose font-black text-xs border-b border-pink-100 pb-3">
+        <div className="bg-[#FFFFFF] p-6 rounded-3xl border border-pink-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-[#880E4F] font-black text-xs border-b border-pink-100 pb-3">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
             </svg>
@@ -438,21 +436,21 @@ export default function OrderDetailPage() {
                           unoptimized 
                         />
                       ) : (
-                        <span className="text-[10px] text-deepRose font-bold">صورة</span>
+                        <span className="text-[10px] text-[#880E4F] font-bold">صورة</span>
                       )}
                     </div>
 
                     <div className="space-y-1 min-w-0 flex-1">
-                      <span className="bg-pink-100 text-deepRose text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                      <span className="bg-pink-100 text-[#880E4F] text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
                         {itemKind}
                       </span>
-                      <h4 className="font-bold text-xs text-textDark truncate">{productName}</h4>
-                      <p className="text-[11px] text-gray-500">الكمية: <span className="font-bold text-textDark">{item.quantity}</span></p>
+                      <h4 className="font-bold text-xs text-[#2D1520] truncate">{productName}</h4>
+                      <p className="text-[11px] text-gray-500">الكمية: <span className="font-bold text-[#2D1520]">{item.quantity}</span></p>
                     </div>
                   </div>
 
                   <div className="text-left shrink-0">
-                    <span className="text-xs font-black text-deepRose">{item.unit_price} ل.س</span>
+                    <span className="text-xs font-black text-[#880E4F]">{item.unit_price} ل.س</span>
                   </div>
                 </div>
               );
@@ -460,12 +458,10 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* إجمالي الفاتورة */}
-        <div className="bg-white p-6 rounded-3xl border-2 border-deepRose/20 shadow-sm flex justify-between items-center">
-          <span className="font-black text-textDark text-sm">المجموع الكلي للفاتورة:</span>
-          <span className="text-xl font-black text-deepRose">{order.total_amount} ل.س</span>
+        <div className="bg-[#FFFFFF] p-6 rounded-3xl border-2 border-[#880E4F]/20 shadow-sm flex justify-between items-center">
+          <span className="font-black text-[#2D1520] text-sm">المجموع الكلي للفاتورة:</span>
+          <span className="text-xl font-black text-[#880E4F]">{order.total_amount} ل.س</span>
         </div>
-
       </div>
     </main>
   );
