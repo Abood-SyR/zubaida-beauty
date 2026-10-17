@@ -549,13 +549,13 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
             تواصل معنا عبر منصاتنا
           </h2>
           <p className="text-sm font-bold" style={{ color: AppColors.lightPinkBg, ...softGlow }}>
-            سوريا • قدسيا، دمشق
+            سوريا • دمشق قدسيا،
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
             {/* واتساب */}
             <a
-              href="https://wa.me/966XXXXXXXXX"
+              href="https://wa.me/+963981082693"
               target="_blank"
               rel="noopener noreferrer"
               className="pointer-events-auto flex items-center gap-2 text-sm font-black text-white hover:text-green-400 transition-colors"
@@ -569,7 +569,7 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
 
             {/* إنستغرام */}
             <a
-              href="https://instagram.com"
+              href="https://www.instagram.com/zubaida_beauty_"
               target="_blank"
               rel="noopener noreferrer"
               className="pointer-events-auto flex items-center gap-2 text-sm font-black text-white hover:text-pink-400 transition-colors"
@@ -582,7 +582,7 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
             </a>
 
             {/* ثريدز */}
-            <a
+            {/* <a
               href="https://threads.net"
               target="_blank"
               rel="noopener noreferrer"
@@ -593,11 +593,11 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
                 <path d="M12.186 24.007c-3.328 0-6.125-1.15-8.087-3.326C2.23 18.602 1.3 15.602 1.3 12.008c0-3.594.93-6.594 2.799-8.673C6.061 1.158 8.858.008 12.186.008c3.27 0 6.028 1.122 7.973 3.243 1.83 1.996 2.752 4.872 2.742 8.55v.231h-3.385v-.231c.007-2.766-.642-4.887-1.928-6.304-1.378-1.517-3.38-2.316-5.402-2.316-2.33 0-4.321.841-5.608 2.368-1.282 1.522-1.932 3.753-1.932 6.452 0 2.7.65 4.93 1.932 6.452 1.287 1.527 3.278 2.368 5.608 2.368 2.022 0 4.024-.799 5.402-2.316 1.286-1.417 1.935-3.538 1.928-6.304H12.186v-3.23h8.318c.092 1.135.138 2.333.138 3.534 0 4.398-1.22 7.842-3.626 10.237-2.315 2.304-5.46 3.538-8.83 3.538z" />
               </svg>
               <span>ثريدز</span>
-            </a>
+            </a> */}
 
             {/* فيسبوك */}
             <a
-              href="https://facebook.com"
+              href="www.facebook.com/share/1F2uZs8mhh"
               target="_blank"
               rel="noopener noreferrer"
               className="pointer-events-auto flex items-center gap-2 text-sm font-black text-white hover:text-blue-400 transition-colors"
