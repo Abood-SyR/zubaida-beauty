@@ -404,7 +404,7 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
         <p className="text-[11px] font-black mt-0.5" style={{ color: AppColors.softPink, ...softGlow }}>
           تطوير{' '}
           <a
-            href="https://wa.me/966XXXXXXXXX"
+            href="https://wa.me/+963981082693"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-white transition"
