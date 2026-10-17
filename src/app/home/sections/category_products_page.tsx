@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import lottie from 'lottie-web';
 import { Product, parseProductFromJson } from '@/models/product';
@@ -60,6 +59,19 @@ function SearchIcon({ name, className = 'h-5 w-5' }: { name: SearchIconName; cla
   );
 }
 
+// دالة مساعدة لاستخراج النص بأمان في حال كانت البيانات نصية أو كائن لغات
+function getLocalizedText(
+  field: Record<string, string> | string | undefined | null,
+  fallback = ''
+): string {
+  if (!field) return fallback;
+  if (typeof field === 'string') return field;
+  if (typeof field === 'object') {
+    return field['ar'] || Object.values(field)[0] || fallback;
+  }
+  return fallback;
+}
+
 export default function CategoryProductsPage({
   categoryId = '',
   categoryTitle = 'منتجات القسم',
@@ -67,7 +79,6 @@ export default function CategoryProductsPage({
   categoryId?: string;
   categoryTitle?: string;
 }) {
-  const router = useRouter();
   const cartManager = CartManager.getInstance();
   const showToast = useToast();
 
@@ -81,6 +92,7 @@ export default function CategoryProductsPage({
 
   const emptyContainerRef = useRef<HTMLDivElement>(null);
 
+  // تشغيل انيميشن عدم وجود منتجات
   useEffect(() => {
     if (!isLoading && products.length === 0 && emptyContainerRef.current) {
       const anim = lottie.loadAnimation({
@@ -97,11 +109,12 @@ export default function CategoryProductsPage({
     }
   }, [isLoading, products.length]);
 
+  // جلب المفضلة عند تحميل الصفحة
   useEffect(() => {
     Promise.resolve()
       .then(() => {
         setFavoritesMap(
-          Object.fromEntries(favoriteService.getLocalFavoriteIds().map((id) => [id, true])),
+          Object.fromEntries(favoriteService.getLocalFavoriteIds().map((id) => [id, true]))
         );
         return favoriteService.getFavorites();
       })
@@ -113,6 +126,7 @@ export default function CategoryProductsPage({
       });
   }, []);
 
+  // جلب المنتجات مع إلغاء الطلبات القديمة تفادياً لـ Race Conditions
   useEffect(() => {
     let isActive = true;
     const timeoutId = window.setTimeout(async () => {
@@ -126,7 +140,7 @@ export default function CategoryProductsPage({
 
         if (isActive) {
           let filtered = prods.map((product: Product) => parseProductFromJson(product));
-          
+
           if (inStockOnly) {
             filtered = filtered.filter((p: Product) => (p.stockQuantity ?? 0) > 0);
           }
@@ -164,12 +178,12 @@ export default function CategoryProductsPage({
 
   const handleAddToCart = (product: Product) => {
     cartManager.addProduct(product);
-    const prodName = product.name?.['ar'] || Object.values(product.name || {})[0] || 'المنتج';
+    const prodName = getLocalizedText(product.name, 'المنتج');
     showToast(`تمت إضافة ${prodName} إلى السلة بنجاح`);
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
+    if (typeof window !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
           title: categoryTitle,
@@ -179,7 +193,7 @@ export default function CategoryProductsPage({
       } catch (error) {
         console.error('Error sharing:', error);
       }
-    } else {
+    } else if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
       showToast('تم نسخ رابط القسم بنجاح');
     }
@@ -187,6 +201,7 @@ export default function CategoryProductsPage({
 
   return (
     <main className="min-h-screen bg-lightPinkBg pb-16" dir="rtl">
+      {/* الهيدر العلوي */}
       <header className="bg-surfaceWhite border-b border-pink-100 px-4 py-4 mb-4 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/home" className="text-primaryRose text-sm font-semibold hover:underline">
@@ -206,6 +221,7 @@ export default function CategoryProductsPage({
       </header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-4">
+        {/* شريط البحث والتصفية */}
         <div className={`relative w-full ${isExpanded ? 'z-50' : 'z-10'}`}>
           <div
             className={`rounded-2xl border p-2.5 transition-[max-height,box-shadow] duration-300 ease-in-out ${
@@ -291,19 +307,18 @@ export default function CategoryProductsPage({
           </div>
         </div>
 
+        {/* عرض المنتجات أو الهيكل العظمي للتحميل */}
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[1, 2, 3, 4, 6].map((i) => (
-              <div key={i} className="h-64 shimmer rounded-2xl"></div>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+              <div key={i} className="h-64 shimmer rounded-2xl bg-gray-200 animate-pulse" />
             ))}
           </div>
         ) : products.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {products.map((product) => {
-              const productName =
-                product.name?.['ar'] || Object.values(product.name || {})[0] || 'منتج';
-              const productDesc =
-                product.description?.['ar'] || Object.values(product.description || {})[0] || '';
+              const productName = getLocalizedText(product.name, 'منتج');
+              const productDesc = getLocalizedText(product.description, '');
               const displayPrice = product.discountedPrice ?? product.price;
               const originalPrice = product.discountedPrice != null ? product.price : null;
               const stockQty = product.stockQuantity ?? 0;
@@ -313,50 +328,41 @@ export default function CategoryProductsPage({
               return (
                 <article
                   key={product.id}
-                  role="link"
-                  tabIndex={0}
-                  onClick={() => router.push(`/product/${product.id}`)}
-                  onKeyDown={(event) => {
-                    if (
-                      event.target === event.currentTarget &&
-                      (event.key === 'Enter' || event.key === ' ')
-                    ) {
-                      event.preventDefault();
-                      router.push(`/product/${product.id}`);
-                    }
-                  }}
-                  className="bg-surfaceWhite rounded-2xl p-2.5 shadow-sm hover:shadow-md transition duration-300 border border-pink-100 flex flex-col relative group cursor-pointer overflow-hidden"
+                  className="bg-surfaceWhite rounded-2xl p-2.5 shadow-sm hover:shadow-md transition duration-300 border border-pink-100 flex flex-col relative group overflow-hidden"
                 >
-                  <div className="w-full h-36 bg-white relative rounded-xl overflow-hidden mb-2 p-1">
-                    {hasValidImage ? (
-                      <Image
-                        src={product.thumbnailUrl!}
-                        alt={productName}
-                        fill
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        className="w-full h-full object-contain group-hover:scale-105 transition duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-textMuted">
-                        صورة غير متوفرة
-                      </div>
-                    )}
-                    {stockQty <= 0 && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow">
-                          نفذت الكمية
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  <Link href={`/product/${product.id}`} className="block w-full">
+                    <div className="w-full h-36 bg-white relative rounded-xl overflow-hidden mb-2 p-1">
+                      {hasValidImage ? (
+                        <Image
+                          src={product.thumbnailUrl!}
+                          alt={productName}
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                          className="w-full h-full object-contain group-hover:scale-105 transition duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-textMuted">
+                          صورة غير متوفرة
+                        </div>
+                      )}
+                      {stockQty <= 0 && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                          <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow">
+                            نفذت الكمية
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
 
                   <button
                     onClick={(event) => {
+                      event.preventDefault();
                       event.stopPropagation();
                       handleToggleFavorite(product);
                     }}
                     aria-label={isFav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
-                    className="absolute top-3 left-3 bg-white/95 p-1.5 rounded-full shadow hover:scale-110 transition z-10 border border-pink-50"
+                    className="absolute top-3 left-3 bg-white/95 p-1.5 rounded-full shadow hover:scale-110 transition z-20 border border-pink-50 cursor-pointer"
                   >
                     <svg
                       className={`w-4 h-4 ${isFav ? 'text-primaryRose fill-current' : 'text-gray-400 fill-none'}`}
@@ -373,8 +379,8 @@ export default function CategoryProductsPage({
                   </button>
 
                   <div className="flex flex-col justify-between flex-1 px-1">
-                    <div>
-                      <h3 className="text-textDark font-bold text-xs mb-0.5 line-clamp-1">
+                    <Link href={`/product/${product.id}`} className="block">
+                      <h3 className="text-textDark font-bold text-xs mb-0.5 line-clamp-1 hover:text-primaryRose transition">
                         {productName}
                       </h3>
                       {productDesc && (
@@ -385,7 +391,7 @@ export default function CategoryProductsPage({
                       <span className="text-[9px] font-semibold text-gray-400 bg-pink-50 px-1.5 py-0.5 rounded-md inline-block mb-1">
                         المخزون: {stockQty}
                       </span>
-                    </div>
+                    </Link>
 
                     <div className="mt-auto pt-1 flex items-center justify-between">
                       <div className="flex flex-col">
@@ -400,6 +406,7 @@ export default function CategoryProductsPage({
                       </div>
                       <button
                         onClick={(event) => {
+                          event.preventDefault();
                           event.stopPropagation();
                           handleAddToCart(product);
                         }}
@@ -432,7 +439,7 @@ export default function CategoryProductsPage({
   );
 }
 
-export async function generateMetadata({ }: { params: { categoryId?: string } }) {
+export async function generateMetadata() {
   return {
     title: 'منتجات القسم | زُبيدة بيوتي',
     description: 'تصفحي أرقى منتجات التجميل والعناية ضمن أقسام متجر زُبيدة بيوتي',

@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import lottie from 'lottie-web';
 import { Product, parseProductFromJson } from '@/models/product';
 import { ProductService } from '@/services/product_service';
 import { FavoriteService } from '@/services/favorite_service';
 import { CartManager } from '@/services/cart_manager';
 import PageLoadingSkeleton from '@/components/ui/page_loading_skeleton';
 import { useToast } from '@/components/ui/toast_provider';
+import nothingAnimation from '@/assets/nothing.json';
 
 const favoriteService = new FavoriteService();
 
@@ -62,6 +64,25 @@ export default function ProductDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
+  const emptyContainerRef = useRef<HTMLDivElement>(null);
+
+  // تشغيل انيميشن عدم وجود المنتج عند عدم العثور عليه أو حدوث خطأ
+  useEffect(() => {
+    if (!isLoading && !product && emptyContainerRef.current) {
+      const anim = lottie.loadAnimation({
+        container: emptyContainerRef.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: nothingAnimation,
+      });
+
+      return () => {
+        anim.destroy();
+      };
+    }
+  }, [isLoading, product]);
+
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
@@ -69,13 +90,13 @@ export default function ProductDetailPage() {
         setProduct(parseProductFromJson(productData));
       } catch (e) {
         console.error('Error fetching product details:', e);
-        showToast('تعذر تحميل تفاصيل المنتج، يرجى المحاولة لاحقاً', 'error');
+        setProduct(null);
       } finally {
         setIsLoading(false);
       }
     };
     fetchProductDetails();
-  }, [productId, showToast]);
+  }, [productId]);
 
   useEffect(() => {
     Promise.resolve()
@@ -97,9 +118,20 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-lightPinkBg flex items-center justify-center text-gray-500 text-sm font-bold">
-        لم يتم العثور على المنتج المطلوب
-      </div>
+      <main className="min-h-screen bg-lightPinkBg flex flex-col items-center justify-center p-4" dir="rtl">
+        <div className="bg-lightPinkBg rounded-3xl  p-8 flex flex-col items-center max-w-md w-full">
+          <div ref={emptyContainerRef} className="w-64 h-64 sm:w-82 sm:h-82 mb-4" />
+          <p className="text-sm font-bold text-deepRose text-center mb-6">
+            لم يتم العثور على المنتج المطلوب أو أنه غير متوفر حالياً.
+          </p>
+          <button
+            onClick={() => router.push('/home')}
+            className="w-full py-3 bg-primaryRose text-white font-bold rounded-2xl shadow-md hover:bg-deepRose transition text-xs cursor-pointer"
+          >
+            العودة للرئيسية
+          </button>
+        </div>
+      </main>
     );
   }
 
@@ -178,7 +210,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (product.stockQuantity <= 0) {
-      showToast('عذراً، هذا المنتج غير متوفر في المخزون حالياً', 'error');
+      // تم إزالة إشعار الخطأ عند نفاد المخزون بناءً على طلبك
       return;
     }
     cartManager.addProduct(product);   
@@ -187,7 +219,7 @@ export default function ProductDetailPage() {
 
   const handleOrderNow = () => {
     if (product.stockQuantity <= 0) {
-      showToast('عذراً، لا يمكن طلب المنتج لعدم توفره في المخزون', 'error');
+      // تم إزالة إشعار الخطأ عند نفاد المخزون بناءً على طلبك
       return;
     }
     router.push(`/checkout?product_id=${product.id}`);   
@@ -228,7 +260,7 @@ export default function ProductDetailPage() {
           <button
             onClick={handleShare}
             aria-label="مشاركة المنتج"
-            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-pink-100 bg-white text-gray-600 shadow-sm transition hover:-translate-y-0.5 flex-none"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-pink-100 bg-white text-gray-600 shadow-sm transition hover:-translate-y-0.5 flex-none cursor-pointer"
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -277,7 +309,7 @@ export default function ProductDetailPage() {
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 bg-white transition flex-none relative ${
+                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 bg-white transition flex-none relative cursor-pointer ${
                       idx === currentImageIndex ? 'border-primaryRose shadow-sm' : 'border-pink-50'
                     }`}
                   >
@@ -347,14 +379,14 @@ export default function ProductDetailPage() {
         <div className="max-w-6xl mx-auto flex items-center gap-2 sm:gap-3">
           <button
             onClick={handleWhatsApp}
-            className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-xl flex items-center justify-center hover:bg-emerald-100 transition flex-none"
+            className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-xl flex items-center justify-center hover:bg-emerald-100 transition flex-none cursor-pointer"
             title="استفسار عبر واتساب"   
           >
             <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
           </button>
           <button
             onClick={handleToggleFavorite}
-            className={`w-12 h-12 rounded-xl flex items-center justify-center transition flex-none border ${isFavorite ? 'bg-rose-50 text-primaryRose border-pink-200' : 'bg-lightPinkBg text-gray-500 border-pink-100'}`}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center transition flex-none border cursor-pointer ${isFavorite ? 'bg-rose-50 text-primaryRose border-pink-200' : 'bg-lightPinkBg text-gray-500 border-pink-100'}`}
             title="المفضلة"   
           >
             <svg className={`w-5 h-5 ${isFavorite ? 'fill-current' : 'fill-none'}`} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
@@ -362,14 +394,14 @@ export default function ProductDetailPage() {
           <button
             onClick={handleAddToCart}
             disabled={product.stockQuantity <= 0}
-            className="flex-1 border-2 border-primaryRose text-primaryRose font-bold py-3 rounded-xl hover:bg-primaryRose hover:text-white transition text-xs disabled:opacity-50 truncate px-2"
+            className="flex-1 border-2 border-primaryRose text-primaryRose font-bold py-3 rounded-xl hover:bg-primaryRose hover:text-white transition text-xs disabled:opacity-50 truncate px-2 cursor-pointer"
           >
             إضافة للسلة   
           </button>
           <button
             onClick={handleOrderNow}
             disabled={product.stockQuantity <= 0}
-            className="flex-1 bg-deepRose text-white font-bold py-3 rounded-xl hover:bg-primaryRose transition text-xs shadow-md disabled:opacity-50 truncate px-2"
+            className="flex-1 bg-deepRose text-white font-bold py-3 rounded-xl hover:bg-primaryRose transition text-xs shadow-md disabled:opacity-50 truncate px-2 cursor-pointer"
           >
             طلب الآن   
           </button>

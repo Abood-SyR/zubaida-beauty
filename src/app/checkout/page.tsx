@@ -47,15 +47,26 @@ function CheckoutContent() {
   const maskedShamCash = 'SC-98214892357982357563-SY';
   const shamCashNumber = maskedShamCash.slice(0, 8) + '...';
 
-  // جلب تفاصيل المنتج الفوري أو تحميل السلة العادية مع تجنب التحذير بتأجيل حالة التحميل أصولاً
+  // جلب تفاصيل المنتج الفوري أو تحميل السلة العادية مع منع التكرار والحظر
   useEffect(() => {
     if (productId) {
-      // استخدام Promise.resolve لتأجيل الـ setState وتجنب الـ cascading renders
+      // التحقق إن كان المنتج موجوداً مسبقاً في السلة أو تم جلبه لتجنب التكرار
+      const existingItem = cartManager.items.find((item) => item.id === productId);
+      if (existingItem) {
+        // إذا كان موجوداً، يمكننا تحويل الطلب ليسحب من السلة مباشرة أو استخدام بيانات مخزنة
+        return;
+      }
+
       Promise.resolve().then(() => setIsProductLoading(true));
       
       productService.getProductById(productId)
         .then((data) => {
-          setInstantProduct(parseProductFromJson(data));
+          const parsed = parseProductFromJson(data);
+          setInstantProduct(parsed);
+          // إضافة المنتج تلقائياً للسلة لكي لا يحتاج المستخدم للخروج والعودة يدوياً
+          if (parsed) {
+            cartManager.addProduct(parsed);
+          }
         })
         .catch((err) => {
           console.error('Error fetching instant product:', err);
@@ -67,7 +78,7 @@ function CheckoutContent() {
     } else {
       CartManager.getInstance().loadFromStorage();
     }
-  }, [productId, productService, showToast]);
+  }, [productId]);
 
   // جلب بيانات المستخدم وتعبئة الاسم، الهاتف، والعنوان تلقائياً
   useEffect(() => {
@@ -115,7 +126,7 @@ function CheckoutContent() {
   }, []);
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(shamCashNumber);
+    navigator.clipboard.writeText(maskedShamCash);
     showToast('تم نسخ رمز الحساب بنجاح');
   };
 
