@@ -427,8 +427,8 @@ export default function CategoryProductsPage({
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 bg-surfaceWhite rounded-2xl border border-pink-100 text-textMuted shadow-sm px-4">
-            <div ref={emptyContainerRef} className="w-48 h-48 sm:w-60 sm:h-60 mb-3" />
+          <div className="flex flex-col items-center justify-center py-16 bg-lightPink rounded-2xl  text-textMuted  px-4">
+            <div ref={emptyContainerRef} className="w-64 h-64 sm:w-82 sm:h-82 mb-3" />
             <p className="text-sm font-bold text-deepRose text-center">
               لا توجد منتجات مطابقة لخيارات البحث أو الفلترة الحالية في هذا القسم.
             </p>
