@@ -102,7 +102,6 @@ export default function HomeClientView() {
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
       const profileCompleted = localStorage.getItem('profile_completed');
 
-      // إذا كان المستخدم مسجل دخوله (لديه توكن) ولم يكمل ملفه الشخصي، نمسكه فوراً ونعيده
       if (token && profileCompleted !== 'true') {
         router.push('/auth/complete-profile');
       }
@@ -158,6 +157,7 @@ export default function HomeClientView() {
     }
   }, [productService]);
 
+  // التحميل الأولي للبيانات والمفضلة (يعمل مرة واحدة فقط عند فتح الصفحة)
   useEffect(() => {
     loadHomeData(false);
     cartManager.loadFromStorage();
@@ -175,7 +175,7 @@ export default function HomeClientView() {
       .catch((error) => {
         console.error('Error loading favorites:', error);
       });
-  }, [loadHomeData, cartManager]);
+  }, []);
 
   const handleProductSelected = (query = searchQuery) => {
     const normalizedQuery = query.trim();
@@ -188,13 +188,11 @@ export default function HomeClientView() {
     const timer = setTimeout(() => {
       if (hasActiveSearchOrFilters) {
         filterProducts(searchQuery, selectedCategories[0] || '', sortBy);
-      } else {
-        loadHomeData(true);
       }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategories, sortBy, hasActiveSearchOrFilters, filterProducts, loadHomeData]);
+  }, [searchQuery, selectedCategories, sortBy, hasActiveSearchOrFilters, filterProducts]);
 
   const handleShare = async () => {
     if (navigator.share) {
