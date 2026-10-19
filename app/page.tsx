@@ -4,12 +4,12 @@ import { ProductService } from '../src/services/product_service';
 
 export const metadata = {
   metadataBase: new URL('https://zubaida-beauty.vercel.app'),
-  title: 'شركة زُبيدة بيوتي | مستحضرات العناية الطبيعية',
-  description: 'تأسست زُبيدة بيوتي عام 2021 لتقديم أرقى مستحضرات التجميل والعناية الطبيعية تحت إشراف خبيرة معتمدة.',
+  title: 'Zubaida Beauty',
+  description: 'علامة تجارية متخصصة في صناعة مستحضرات العناية بالبشرة والشعر.',
   openGraph: {
-    title: 'شركة زُبيدة بيوتي | مستحضرات العناية الطبيعية',
-    description: 'تأسست زُبيدة بيوتي عام 2021 لتقديم أرقى مستحضرات التجميل والعناية الطبيعية تحت إشراف خبيرة معتمدة.',
-    images: [{ url: '/logo.png', width: 800, height: 800, alt: 'Zubaida Beauty Logo' }],
+    title: 'Zubaida Beauty',
+    description: 'علامة تجارية متخصصة في صناعة مستحضرات العناية بالبشرة والشعر. تهدف لتقديم منتجات تجمع بين المعرفة والجمال.',
+    images: [{ url: '/images.jpg', width: 800, height: 800, alt: 'Zubaida Beauty Logo' }],
     locale: 'ar_SY',
     type: 'website',
   },
