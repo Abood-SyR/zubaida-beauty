@@ -66,7 +66,6 @@ export default function ProductDetailPage() {
 
   const emptyContainerRef = useRef<HTMLDivElement>(null);
 
-  // تشغيل انيميشن عدم وجود المنتج عند عدم العثور عليه أو حدوث خطأ
   useEffect(() => {
     if (!isLoading && !product && emptyContainerRef.current) {
       const anim = lottie.loadAnimation({
@@ -118,8 +117,8 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <main className="min-h-screen bg-lightPinkBg flex flex-col items-center justify-center p-4" dir="rtl">
-        <div className="bg-lightPinkBg rounded-3xl  p-8 flex flex-col items-center max-w-md w-full">
+      <main className="min-h-screen bg-lightPinkBg flex flex-col items-center justify-center p-4 text-right" dir="rtl">
+        <div className="bg-lightPinkBg rounded-3xl p-8 flex flex-col items-center max-w-md w-full">
           <div ref={emptyContainerRef} className="w-64 h-64 sm:w-82 sm:h-82 mb-4" />
           <p className="text-sm font-bold text-deepRose text-center mb-6">
             لم يتم العثور على المنتج المطلوب أو أنه غير متوفر حالياً.
@@ -148,23 +147,61 @@ export default function ProductDetailPage() {
     });
   }
 
-  const formatDetailValue = (field: unknown) => {
-    if (!field) return '-';
+  // ترجمة الكلمات المطلوبة بدقة واستخراج النصوص من الكائنات دون إظهار المفاتيح
+  const translateKeyOrValue = (text: string): string => {
+    if (!text) return '';
+    const lower = text.toLowerCase().trim();
+    if (lower === 'body') return 'جسم';
+    if (lower === 'hair') return 'شعر';
+    if (lower === 'skin') return 'بشرة';
+    return text;
+  };
+
+  const formatDetailValue = (field: unknown): React.ReactNode => {
+    if (field === null || field === undefined) return '-';
+    
     if (typeof field === 'object' && !Array.isArray(field)) {
-      const values = Object.values(field)
-        .filter((value) => value != null && value !== 'string' && value !== '')
-        .map(String);
-      if (values.length > 0) return values.join(' - ');
-    } else if (Array.isArray(field)) {
-      const items = field
-        .filter((item) => item != null && item !== 'string' && item !== '')
-        .map(String);
-      if (items.length > 0) return items.join('، ');
-    } else {
-      const str = String(field);
-      if (str !== '' && str !== 'string') return str;
+      const entries = Object.entries(field as Record<string, unknown>).filter(
+        ([, val]) => val != null && val !== 'string' && val !== ''
+      );
+      if (entries.length === 0) return '-';
+
+      // إذا كان الكائن يحتوي فقط على مفتاح اللغة مثل { ar: "..." }
+      if (entries.length === 1 && (entries[0][0] === 'ar' || entries[0][0] === 'en')) {
+        const valStr = String(entries[0][1]);
+        return <span className="text-right block w-full">{translateKeyOrValue(valStr)}</span>;
+      }
+
+      return (
+        <div className="space-y-1 w-full text-right">
+          {entries.map(([key, val], idx) => (
+            <div key={idx} className="flex justify-between items-center text-xs border-b border-pink-50 pb-1 last:border-0 last:pb-0">
+              <span className="font-bold text-gray-500">{translateKeyOrValue(key)}:</span>
+              <span className="font-semibold text-textDark text-right">{translateKeyOrValue(String(val))}</span>
+            </div>
+          ))}
+        </div>
+      );
+    } 
+    
+    if (Array.isArray(field)) {
+      const items = field.filter((item) => item != null && item !== 'string' && item !== '');
+      if (items.length === 0) return '-';
+
+      return (
+        <div className="flex flex-wrap gap-1.5 w-full justify-start">
+          {items.map((item, idx) => (
+            <span key={idx} className="px-2.5 py-1 bg-pink-50 text-deepRose rounded-lg text-xs font-semibold border border-pink-100">
+              {translateKeyOrValue(String(item))}
+            </span>
+          ))}
+        </div>
+      );
     }
-    return '-';
+
+    const str = String(field);
+    if (str === '' || str === 'string') return '-';
+    return translateKeyOrValue(str);
   };
 
   const handleSmartBack = () => {
@@ -210,16 +247,22 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (product.stockQuantity <= 0) {
-      // تم إزالة إشعار الخطأ عند نفاد المخزون بناءً على طلبك
+      showToast('نفد المخزون من هذا المنتج', 'error');
       return;
     }
-    cartManager.addProduct(product);   
-    showToast('تمت إضافة المنتج إلى السلة بنجاح', 'success');   
+
+    try {
+      cartManager.addProduct(product, 1);
+      showToast('تمت إضافة المنتج إلى السلة بنجاح', 'success');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      showToast(error.message || 'الكمية المطلوبة تتجاوز المخزون المتاح', 'error');
+    }
   };
 
   const handleOrderNow = () => {
     if (product.stockQuantity <= 0) {
-      // تم إزالة إشعار الخطأ عند نفاد المخزون بناءً على طلبك
+      showToast('نفد المخزون من هذا المنتج', 'error');
       return;
     }
     router.push(`/checkout?product_id=${product.id}`);   
@@ -230,13 +273,13 @@ export default function ProductDetailPage() {
     if (formatted === '-') return null;
 
     return (
-      <div className="mb-3 p-4 bg-surfaceWhite rounded-2xl border border-pink-100 shadow-sm flex items-start gap-3">
+      <div className="mb-3 p-4 bg-surfaceWhite rounded-2xl border border-pink-100 shadow-sm flex items-start gap-3 text-right" dir="rtl">
         <div className="p-2.5 bg-lightPinkBg rounded-xl text-deepRose flex items-center justify-center flex-none">
           {iconSvg}
         </div>
-        <div className="min-w-0 flex-1">
-          <h4 className="text-xs font-bold text-gray-400 mb-1">{title}</h4>
-          <p className="text-sm font-semibold text-textDark leading-relaxed break-words">{formatted}</p>
+        <div className="min-w-0 flex-1 text-right">
+          <h4 className="text-xs font-bold text-gray-400 mb-1.5 text-right">{title}</h4>
+          <div className="text-sm font-semibold text-textDark leading-relaxed text-right">{formatted}</div>
         </div>
       </div>
     );
@@ -246,7 +289,7 @@ export default function ProductDetailPage() {
   const stockPercentage = totalUnits > 0 ? Math.min(Math.round((product.stockQuantity / totalUnits) * 100), 100) : 0;
 
   return (
-    <main className="min-h-screen bg-lightPinkBg pb-28" dir="rtl">
+    <main className="min-h-screen bg-lightPinkBg pb-28 text-right" dir="rtl">
       <header className="bg-surfaceWhite border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex justify-between items-center gap-3">
           <button
@@ -304,7 +347,7 @@ export default function ProductDetailPage() {
             </div>
 
             {allImages.length > 1 && (
-              <div className="flex gap-2 p-3 overflow-x-auto border-t border-pink-100 scrollbar-none">
+              <div className="flex gap-2 p-3 overflow-x-auto border-t border-pink-100 scrollbar-none justify-start">
                 {allImages.map((img, idx) => (
                   <button
                     key={idx}
@@ -321,17 +364,21 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-5">
+            <div className="bg-surfaceWhite p-6 rounded-3xl border border-pink-100 shadow-sm space-y-5 text-right">
               <div className="flex justify-between items-start gap-4">
-                <h1 className="text-lg sm:text-2xl font-bold text-textDark break-words flex-1">{productName}</h1>   
-                <span className="text-xl sm:text-2xl font-black text-deepRose flex-none">{product.price} ل.س</span>   
+                <div>
+                  <h1 className="text-lg sm:text-2xl font-bold text-textDark break-words text-right">{productName}</h1>
+                </div>
+                <div className="text-left flex-none">
+                  <span className="text-xl sm:text-2xl font-black text-deepRose block">{product.price} ل.س</span>
+                </div>
               </div>
 
               {totalUnits > 0 && (
-                <div className="p-4 bg-lightPinkBg/60 rounded-2xl border border-pink-100 space-y-2">
+                <div className="p-3 bg-lightPinkBg/40 rounded-2xl border border-pink-100 space-y-1.5 text-right">
                   <div className="flex justify-between items-center text-xs font-semibold text-gray-600">
-                    <span>حالة المخزون والمبيعات</span>
-                    <span>{product.stockQuantity > 0 ? `المتبقي: ${product.stockQuantity}` : 'نفد المخزون'}</span>
+                    <span className="text-sm font-bold text-deepRose">{product.stockQuantity} قطع</span>
+                    <span>{stockPercentage}%</span>
                   </div>
                   <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden flex dir-ltr">
                     <div 
@@ -339,16 +386,12 @@ export default function ProductDetailPage() {
                       style={{ width: `${stockPercentage}%` }}
                     ></div>
                   </div>
-                  <div className="flex justify-between items-center text-[11px] text-gray-400">
-                    <span>المبيعات: {product.soldCount}</span>
-                    <span>الإجمالي: {totalUnits}</span>
-                  </div>
                 </div>
               )}
             </div>
 
-            <div>
-              <h2 className="font-bold text-deepRose text-base mb-3">تفاصيل المنتج والمواصفات</h2>   
+            <div className="text-right">
+              <h2 className="font-bold text-deepRose text-base mb-3 text-right">تفاصيل المنتج والمواصفات الشاملة</h2>   
               {renderDetailRow('وصف المنتج', product.description, (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v10a2 2 0 01-2 2z" /><path strokeLinecap="round" strokeLinejoin="round" d="M14 2v6h6" /></svg>
               ))}

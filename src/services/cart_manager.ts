@@ -34,12 +34,11 @@ export class CartItem {
       : String(this.product!.id ?? '');
   }
 
-get name(): string {
+  get name(): string {
     if (this.group != null) return CartItem.localizedName(this.group['name']) ?? 'مجموعة مميزة';
     const data = this.offer;
     if (data != null) return CartItem.localizedName(data['title']) ?? 'عرض خاص';
     
-    // جلب الاسم من كائن الـ Product حسب اللغة العربية
     const prodName = this.product?.name;
     if (prodName && typeof prodName === 'object') {
       return prodName['ar']?.toString() ?? Object.values(prodName)[0]?.toString() ?? '';
@@ -288,15 +287,34 @@ export class CartManager {
       const snapshot = JSON.stringify(this.items.map((item) => item.toJson()));
       localStorage.setItem(CartManager.STORAGE_KEY, snapshot);
       this.notifyListeners();
-    } catch (e) {
+    }  catch (e) {
       console.error('Failed to save cart to storage', e);
     }
   }
 
+  // التحقق من الكمية المتوفرة في المخزون قبل إضافة المنتج للسلة
   addProduct(product: Product, quantity: number = 1): void {
-    const existingIndex = this.items.findIndex((item) => item.product?.id === (product as any).id);
+    const productId = String((product as any).id ?? '');
+    
+    // جلب حد المخزون المتاح (دعم التسميتين stockQuantity و stock_quantity)
+    const stockQuantity = Number((product as any).stockQuantity ?? (product as any).stock_quantity ?? 0);
+
+    const existingIndex = this.items.findIndex((item) => item.product?.id === productId);
+    
+    let currentQuantityInCart = 0;
     if (existingIndex >= 0) {
-      this.items[existingIndex].quantity += quantity;
+      currentQuantityInCart = this.items[existingIndex].quantity;
+    }
+
+    const requestedTotal = currentQuantityInCart + quantity;
+
+    // منع الإضافة إذا تجاوزت الكمية المتاحة في المخزون
+    if (stockQuantity > 0 && requestedTotal > stockQuantity) {
+      throw new Error(`عذراً، الكمية المتوفرة في المخزون هي ${stockQuantity} قطع فقط.`);
+    }
+
+    if (existingIndex >= 0) {
+      this.items[existingIndex].quantity = requestedTotal;
     } else {
       this.items.push(new CartItem({ product, quantity }));
     }
@@ -330,10 +348,19 @@ export class CartManager {
     this.saveToStorage();
   }
 
+  // التحقق أيضاً عند تحديث الكمية يدوياً من السلة
   updateQuantity(itemId: string, quantity: number): void {
     const index = this.items.findIndex((item) => item.id === itemId);
     if (index >= 0) {
       if (quantity > 0) {
+        const item = this.items[index];
+        // إذا كان عنصراً عبارة عن منتج مفرد، نتحقق من المخزون عند التحديث
+        if (item.product != null) {
+          const stockQuantity = Number((item.product as any).stockQuantity ?? (item.product as any).stock_quantity ?? 0);
+          if (stockQuantity > 0 && quantity > stockQuantity) {
+            throw new Error(`عذراً، الكمية المتوفرة في المخزون هي ${stockQuantity} قطع فقط.`);
+          }
+        }
         this.items[index].quantity = quantity;
       } else {
         this.items.splice(index, 1);

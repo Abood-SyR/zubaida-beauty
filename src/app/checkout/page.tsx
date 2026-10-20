@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
@@ -28,6 +29,14 @@ function CheckoutContent() {
   const [instantProduct, setInstantProduct] = useState<Product | null>(null);
   const [isProductLoading, setIsProductLoading] = useState(false);
 
+  // حالة نافذة عدم توفر الكمية مع تفاصيلها
+  const [stockModalData, setStockModalData] = useState<{
+    productName: string;
+    productImage: string;
+    availableNum: number;
+    requestedNum: number;
+  } | null>(null);
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -50,10 +59,8 @@ function CheckoutContent() {
   // جلب تفاصيل المنتج الفوري أو تحميل السلة العادية مع منع التكرار والحظر
   useEffect(() => {
     if (productId) {
-      // التحقق إن كان المنتج موجوداً مسبقاً في السلة أو تم جلبه لتجنب التكرار
       const existingItem = cartManager.items.find((item) => item.id === productId);
       if (existingItem) {
-        // إذا كان موجوداً، يمكننا تحويل الطلب ليسحب من السلة مباشرة أو استخدام بيانات مخزنة
         return;
       }
 
@@ -63,7 +70,6 @@ function CheckoutContent() {
         .then((data) => {
           const parsed = parseProductFromJson(data);
           setInstantProduct(parsed);
-          // إضافة المنتج تلقائياً للسلة لكي لا يحتاج المستخدم للخروج والعودة يدوياً
           if (parsed) {
             cartManager.addProduct(parsed);
           }
@@ -184,7 +190,7 @@ function CheckoutContent() {
 
     if (paymentMethod === 'cod' && !isLoggedIn) {
       showToast(
-        isAuthLoading ? 'جارٍ التحقق من تسجيل الدخول، حاول مجدداً بعد لحظات' : 'الدفع عند الاستلام يتطلب تسجيل الدخول',
+        isAuthLoading ? 'جارٍ التحقق من تسجيل الدخول، حاول مجدداً بعد لحظات' : 'الدفع عند الاستلاستلام يتطلب تسجيل الدخول',
         'error'
       );
       return;
@@ -203,6 +209,40 @@ function CheckoutContent() {
     if (!productId && cartManager.items.length === 0) {
       showToast('السلة فارغة، أضف المنتجات قبل إتمام الطلب', 'error');
       return;
+    }
+
+    // [التحقق من توفر الكمية: إظهار النافذة المنبثقة فقط في حال كانت الكمية المطلوبة أكبر من المتاحة]
+    if (productId && instantProduct) {
+      const rawProd: any = instantProduct;
+      const stock = rawProd.stockQuantity ?? rawProd.stock_quantity ?? rawProd.stock ?? 6;
+      const availableNum = Number(stock);
+      const requestedNum = 1;
+
+      if (requestedNum > availableNum) {
+        setStockModalData({
+          productName: instantProduct.getName('ar'),
+          productImage: instantProduct.thumbnailUrl || instantProduct.images?.[0] || '/images.jpg',
+          availableNum,
+          requestedNum,
+        });
+        return;
+      }
+    } else if (cartManager.items.length > 0) {
+      const firstItem = cartManager.items[0];
+      const rawProd: any = firstItem.product || {};
+      const stock = rawProd.stockQuantity ?? rawProd.stock_quantity ?? rawProd.stock ?? 6;
+      const availableNum = Number(stock);
+      const requestedNum = firstItem.quantity;
+
+      if (requestedNum > availableNum) {
+        setStockModalData({
+          productName: firstItem.name,
+          productImage: firstItem.imageUrl || '/images.jpg',
+          availableNum,
+          requestedNum,
+        });
+        return;
+      }
     }
 
     if (paymentMethod === 'sham_cash') {
@@ -296,6 +336,62 @@ function CheckoutContent() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_#fff0f6_0%,_#fff8fb_36%,_#fff_100%)] pb-24" dir="rtl">
+      
+      {/* نافذة عدم توفر الكمية مع الصورة والكميتين وزر الواتساب */}
+      {stockModalData && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-pink-100 shadow-2xl space-y-4 text-right animate-fadeIn">
+            
+            <div className="text-center font-bold text-s text-red-600 p-3 rounded-2xl">
+              قام احد باتمام شراء قبل قليل مما ادى لنقصان الكمية
+            </div>
+
+            <div className="flex items-center gap-3 bg-pink-50/50 p-3 rounded-2xl border border-pink-100">
+              <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-pink-200 bg-white flex-shrink-0">
+                <Image
+                  src={stockModalData.productImage}
+                  alt={stockModalData.productName}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-textDark truncate">{stockModalData.productName}</h4>
+                <div className="flex gap-3 mt-1 text-[11px] font-semibold text-gray-600">
+                  <span>المطلوب: <strong className="text-deepRose font-mono">{stockModalData.requestedNum}</strong></span>
+                  <span>المتاح حالياً: <strong className="text-emerald-600 font-mono">اقل من {stockModalData.availableNum}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              نحن اسفون لعدم توفر المنتج بالكمية المطلوبة يمكنك التواصل معنا بحال كنت تريد الكمية باسرع وقت ممكن
+            </p>
+
+            <div className="space-y-2 pt-1">
+              <a
+                href={`https://wa.me/963981082693?text=${encodeURIComponent(`مرحباً، لا تتوفر الكمية المطلوبة للمنتج (${stockModalData.productName})، أود تأمين الكمية باسرع وقت.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2 text-xs"
+              >
+                <span>التواصل عبر واتساب </span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setStockModalData(null)}
+                className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-textDark font-bold rounded-xl transition text-xs"
+              >
+                إغلاق
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       <header className="bg-white/80 border-b border-pink-100 px-4 py-4 mb-6 shadow-sm sticky top-0 z-40 backdrop-blur-md">
         <div className="max-w-xl mx-auto flex justify-between items-center">
           <button onClick={handleReturnToCart} className="text-primaryRose text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer">
