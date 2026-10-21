@@ -53,8 +53,8 @@ function CheckoutContent() {
   const [invoiceNumber, setInvoiceNumber] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
-  const maskedShamCash = 'SC-98214892357982357563-SY';
-  const shamCashNumber = maskedShamCash.slice(0, 8) + '...';
+  const maskedShamCash = '51463fb008e087b777d10a4b8df7b9d2';
+  const shamCashNumber = '...' + maskedShamCash.slice(0, 8) ;
 
   // جلب تفاصيل المنتج الفوري أو تحميل السلة العادية مع منع التكرار والحظر
   useEffect(() => {
@@ -717,7 +717,7 @@ function CheckoutContent() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="relative h-24 w-24 flex-shrink-0 bg-gray-50 rounded-xl p-1 border border-pink-100">
                       <Image
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ShamCash"
+                        src="/sham-cash.png"
                         alt="QR Code"
                         fill
                         unoptimized
