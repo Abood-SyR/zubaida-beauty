@@ -63,8 +63,7 @@ export class ProductService {
       const data = await apiClient('/products/get_new_product');
       return Array.isArray(data) ? data : [];
     } catch (e) {
-      throw new Error(`فشل في جلب المنتجات الجديدة: ${e}`);
-    }
+      return [];   }
   }
 
   // جلب الأقسام
