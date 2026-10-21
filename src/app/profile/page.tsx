@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useToast } from '@/components/ui/toast_provider';
 import { ApiService } from '@/services/api_client';
+import lottie from 'lottie-web';
+import loginAnimation from '@/assets/login.json';
 
 import ProfileTab from '@/components/profile/ProfileTab';
 import OrdersTab from '@/components/profile/OrdersTab';
@@ -24,6 +26,9 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'notifications'>('profile');
   const [isLoading, setIsLoading] = useState(true);
 
+  // مرجع لحاوية أنيميشن Lottie لغير المسجلين
+  const lottieContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -36,7 +41,6 @@ export default function ProfilePage() {
         if (isMounted) {
           setIsLoading(false);
         }
-        showToast('يرجى تسجيل الدخول لعرض الملف الشخصي', 'error');
         return;
       }
 
@@ -88,6 +92,23 @@ export default function ProfilePage() {
     };
   }, [apiService, showToast]);
 
+  // تشغيل أنيميشن Lottie عند عدم وجود تسجيل دخول
+  useEffect(() => {
+    if (isLoading || userData || !lottieContainerRef.current) return;
+
+    const anim = lottie.loadAnimation({
+      container: lottieContainerRef.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      animationData: loginAnimation,
+    });
+
+    return () => {
+      anim.destroy();
+    };
+  }, [isLoading, userData]);
+
   const handleProfileUpdate = (updatedUser: any) => {
     setUserData(updatedUser);
     if (typeof window !== 'undefined') {
@@ -122,14 +143,19 @@ export default function ProfilePage() {
     );
   }
 
+  // واجهة المستخدم غير المسجل (مع Lottie Animation)
   if (!userData) {
     return (
       <main className="min-h-screen bg-[#FFF5F7] flex items-center justify-center p-6" dir="rtl">
-        <div className="text-center bg-white rounded-3xl p-8 shadow-sm max-w-sm w-full space-y-4 border border-pink-100">
-          <div className="w-16 h-16 bg-pink-100 text-deepRose rounded-full mx-auto flex items-center justify-center font-bold text-2xl">
-            !
+        <div className="text-center  rounded-3xl p-8  max-w-sm w-full space-y-4 flex flex-col items-center">
+          
+          {/* أنيميشن Lottie بدلاً من الأيقونة السابقة */}
+          <div className="w-72 h-72 flex items-center justify-center">
+            <div ref={lottieContainerRef} className="w-full h-full object-contain" />
           </div>
+
           <p className="text-textDark text-sm font-bold">يرجى تسجيل الدخول لعرض الملف الشخصي</p>
+          
           <Link
             href="/auth/login"
             className="block w-full bg-deepRose text-white font-black py-3 rounded-2xl shadow-md text-sm text-center hover:bg-primaryRose transition"
@@ -144,7 +170,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#FFF5F7] pb-16 relative" dir="rtl">
       
-      {/* الهيدر العلوي: يحتوي على زر العودة للرئيسية وعنوان الصفحة فقط */}
+      {/* الهيدر العلوي */}
       <header className="bg-white border-b border-pink-100 px-6 py-4 sticky top-0 z-40 shadow-xs">
         <div className="max-w-xl mx-auto flex justify-between items-center">
           <Link href="/home" className="inline-flex items-center gap-1.5 text-xs font-bold text-deepRose hover:scale-105 transition">
@@ -154,7 +180,7 @@ export default function ProfilePage() {
             <span>الرئيسية</span>
           </Link>
           <h1 className="text-base font-black text-deepRose">الملف الشخصي</h1>
-          <div className="w-10"></div> {/* عنصر فارغ لموازنة العنوان بالمنتصف */}
+          <div className="w-10"></div>
         </div>
       </header>
 
