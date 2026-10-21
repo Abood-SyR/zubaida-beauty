@@ -1,5 +1,6 @@
 import MainLayout from "@/components/layouts/MainLayout";
 import { ToastProvider } from "@/components/ui/toast_provider";
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AppColors } from "@/constants/app_colors";
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -28,11 +29,13 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <body className="bg-lightPinkBg text-textDark font-sans antialiased" style={themeStyle}>
-        <ToastProvider>
-          <MainLayout>{children}</MainLayout>
-        </ToastProvider>
-        <Analytics />
-        <SpeedInsights />
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          <ToastProvider>
+            <MainLayout>{children}</MainLayout>
+          </ToastProvider>
+          <Analytics />
+          <SpeedInsights />
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

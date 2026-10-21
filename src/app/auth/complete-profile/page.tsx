@@ -14,6 +14,7 @@ export default function CompleteProfilePage() {
   const [apiService] = useState(() => new ApiService());
 
   const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [detailedAddress, setDetailedAddress] = useState('');
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
   
@@ -47,6 +48,9 @@ export default function CompleteProfilePage() {
           if (userRes.data.full_name && userRes.data.full_name !== 'عميل جديد') {
             setFullName(userRes.data.full_name);
           }
+          if (userRes.data.phone_number) {
+            setPhoneNumber(userRes.data.phone_number);
+          }
           if (userRes.data.address?.detailed) {
             setDetailedAddress(userRes.data.address.detailed);
           }
@@ -55,7 +59,12 @@ export default function CompleteProfilePage() {
           }
           
           // إذا كانت البيانات مكتملة مسبقاً في قاعدة البيانات، نحدث الذاكرة المحلية احتياطياً
-          if (userRes.data.full_name && userRes.data.full_name !== 'عميل جديد' && userRes.data.address?.detailed) {
+          if (
+            userRes.data.full_name && 
+            userRes.data.full_name !== 'عميل جديد' && 
+            userRes.data.phone_number && 
+            userRes.data.address?.detailed
+          ) {
             localStorage.setItem('profile_completed', 'true');
           }
         }
@@ -96,6 +105,10 @@ export default function CompleteProfilePage() {
       showToast('يرجى إدخال الاسم الكامل', 'error');
       return;
     }
+    if (!phoneNumber.trim()) {
+      showToast('يرجى إدخال رقم الهاتف للتواصل والطلبات', 'error');
+      return;
+    }
     if (!detailedAddress.trim()) {
       showToast('يرجى إدخال الموقع التفصيلي لتوصيل الطلبات', 'error');
       return;
@@ -105,6 +118,7 @@ export default function CompleteProfilePage() {
     try {
       const response = await apiService.client.patch('/auth/me/profile', {
         full_name: fullName.trim(),
+        phone_number: phoneNumber.trim(),
         address: {
           detailed: detailedAddress.trim(),
           preferences: selectedPreferences
@@ -121,7 +135,7 @@ export default function CompleteProfilePage() {
         showToast(response.data?.detail || 'فشل حفظ البيانات', 'error');
       }
     } catch (e: any) {
-      showToast(e?.message || 'حدث خطأ أثناء الاتصال بالسيرفر', 'error');
+      showToast(e?.response?.data?.detail || e?.message || 'حدث خطأ أثناء الاتصال بالسيرفر', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +180,20 @@ export default function CompleteProfilePage() {
               onChange={(e) => setFullName(e.target.value)}
               required
               placeholder="مثال: فاطمة أحمد"
+              className="w-full px-5 py-3.5 rounded-2xl border border-pink-200 text-sm text-textDark font-bold focus:outline-none focus:ring-2 focus:ring-deepRose/40 bg-surfaceWhite shadow-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-textDark/90 mb-1.5 pr-1">
+              رقم الهاتف المحمول <span className="text-deepRose">*</span>
+            </label>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              required
+              placeholder="09xxxxxxxx"
               className="w-full px-5 py-3.5 rounded-2xl border border-pink-200 text-sm text-textDark font-bold focus:outline-none focus:ring-2 focus:ring-deepRose/40 bg-surfaceWhite shadow-sm"
             />
           </div>
