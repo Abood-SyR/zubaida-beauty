@@ -116,7 +116,7 @@ export default function UserAuthPage() {
               <div className="w-full border-t border-pink-200" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-surfaceWhite px-3 text-textDark/50 font-bold">أو</span>
+              <span className="bg-lightPinkBg px-3 text-textDark/50 font-bold">أو</span>
             </div>
           </div>
 
