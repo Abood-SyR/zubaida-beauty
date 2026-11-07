@@ -338,7 +338,7 @@ export default function PricingPage() {
               <p className="text-sm font-bold text-deepRose mb-1">
                 {searchQuery ? 'لا توجد منتجات مطابقة لكلمة البحث' : 'لا توجد منتجات متوفرة في هذه الفئة حالياً'}
               </p>
-              <p className="text-xs text-textMuted">جرّبي اختيار فئة أخرى أو تغيير كلمات البحث.</p>
+              <p className="text-xs text-textMuted"> اختر فئة أخرى أو تغيير كلمات البحث.</p>
             </div>
           ) : (
             <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2">
