@@ -25,6 +25,53 @@ export interface Product {
   getName(lang?: string): string;
 }
 
+export interface WholesaleCatalogProduct {
+  id: string;
+  name: Record<string, unknown>;
+  description?: Record<string, unknown> | string | null;
+  wholesalePrice: number;
+  sizes?: string[] | null;
+  skinHairType?: string[] | null;
+  usageInstructions?: Record<string, unknown> | string | null;
+  ingredients?: Record<string, unknown> | string | null;
+  compatibility?: Record<string, unknown> | string | null;
+  attributes?: Record<string, unknown> | null;
+  thumbnailUrl?: string | null;
+  images?: string[] | null;
+  categoryId?: string | null;
+}
+
+function parseLocalizedProductValue(value: unknown): Record<string, unknown> | string | null {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+export function parseWholesaleProductFromJson(json: Record<string, unknown>): WholesaleCatalogProduct {
+  const name = parseLocalizedProductValue(json['name']);
+  const wholesalePrice = Number(json['wholesale_price']);
+
+  return {
+    id: String(json['id'] ?? ''),
+    name: typeof name === 'string' ? { ar: name } : name ?? {},
+    description: parseLocalizedProductValue(json['description']),
+    wholesalePrice: Number.isFinite(wholesalePrice) ? wholesalePrice : 0,
+    sizes: Array.isArray(json['sizes']) ? json['sizes'].map(String) : null,
+    skinHairType: Array.isArray(json['skin_hair_type']) ? json['skin_hair_type'].map(String) : null,
+    usageInstructions: parseLocalizedProductValue(json['usage_instructions']),
+    ingredients: parseLocalizedProductValue(json['ingredients']),
+    compatibility: parseLocalizedProductValue(json['compatibility']),
+    attributes: json['attributes'] && typeof json['attributes'] === 'object' && !Array.isArray(json['attributes'])
+      ? json['attributes'] as Record<string, unknown>
+      : null,
+    thumbnailUrl: typeof json['thumbnail_url'] === 'string' ? json['thumbnail_url'] : null,
+    images: Array.isArray(json['images']) ? json['images'].map(String) : null,
+    categoryId: typeof json['category_id'] === 'string' ? json['category_id'] : null,
+  };
+}
+
 // دالة مساعدة لتحويل الـ JSON القادم من الـ API إلى Product مطابق لمنطق فلاتر
 export function parseProductFromJson(json: Record<string, any>): Product {
   const discount = json['discount'] && typeof json['discount'] === 'object' ? json['discount'] : {};

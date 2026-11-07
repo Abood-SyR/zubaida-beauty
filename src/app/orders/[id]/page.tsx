@@ -186,7 +186,7 @@ export default function OrderDetailPage() {
     if (!orderId) return;
     const shortId = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
     const text = encodeURIComponent(`مرحباً، لدي استفسار بخصوص الطلب رقم #${shortId}`);
-    window.open(`https://wa.me/+963981082693?text=${text}`, '_blank');
+    window.open(`https://wa.me/+963966627602?text=${text}`, '_blank');
   };
 
   if (isLoading) {

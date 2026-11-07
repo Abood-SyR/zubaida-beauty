@@ -194,22 +194,22 @@ export default function HomeClientView() {
     return () => clearTimeout(timer);
   }, [searchQuery, selectedCategories, sortBy, hasActiveSearchOrFilters, filterProducts]);
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'شركة زُبيدة بيوتي',
-          text: 'اكتشفي أرقى منتجات التجميل والعناية المصنعة محلياً في شركة زُبيدة بيوتي',
-          url: window.location.href,
-        });
-      } catch (error) {
-        console.error('Error sharing:', error);
-      }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      showToast('تم نسخ رابط المتجر بنجاح');
-    }
-  };
+  // const handleShare = async () => {
+  //   if (navigator.share) {
+  //     try {
+  //       await navigator.share({
+  //         title: 'شركة زُبيدة بيوتي',
+  //         text: 'اكتشفي أرقى منتجات التجميل والعناية المصنعة محلياً في شركة زُبيدة بيوتي',
+  //         url: window.location.href,
+  //       });
+  //     } catch (error) {
+  //       console.error('Error sharing:', error);
+  //     }
+  //   } else {
+  //     navigator.clipboard.writeText(window.location.href);
+  //     showToast('تم نسخ رابط المتجر بنجاح');
+  //   }
+  // };
 
   const handleToggleFavorite = async (product: Product) => {
     const productId = product.id;
@@ -236,24 +236,25 @@ export default function HomeClientView() {
       <header className="sticky top-0 z-40 bg-surfaceWhite/75 backdrop-blur-xl border-b border-white/40 px-4 py-3 mb-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link
-              href="/help/contact"
-              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
-            >
-              اتصل بنا
-            </Link>
+            
             <Link
               href="/"
               className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
             >
               حول زبيدة بيوتي
             </Link>
-            <button
-              onClick={handleShare}
-              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors cursor-pointer"
+            <Link
+              href="/pricing"
+              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
             >
-              مشاركة
-            </button>
+              اسعار الجملة
+            </Link>
+            <Link
+              href="/help/contact"
+              className="text-xs sm:text-sm font-semibold text-deepRose hover:text-primaryRose transition-colors"
+            >
+              اتصل بنا
+            </Link>
           </div>
 
           <Link href="/" className="flex items-center">

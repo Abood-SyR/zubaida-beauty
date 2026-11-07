@@ -407,7 +407,7 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
             rel="noopener noreferrer"
             className="underline hover:text-white transition"
           >
-            Abdullrahman-Abdullah
+            Abdullrahman Abdullah
           </a>
         </p>
       </div>
@@ -502,7 +502,7 @@ export default function RoadJourneyContent({ initialProducts = [] }: { initialPr
           <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
             {/* واتساب */}
             <a
-              href="https://wa.me/+963981082693"
+              href="https://wa.me/+963966627602"
               target="_blank"
               rel="noopener noreferrer"
               className="pointer-events-auto flex items-center gap-2 text-sm font-black text-white hover:text-green-400 transition-colors"

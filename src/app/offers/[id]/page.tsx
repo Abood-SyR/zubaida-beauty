@@ -289,7 +289,7 @@ export default function OfferDetailPage() {
 
   const handleWhatsApp = () => {
     const message = encodeURIComponent(`مرحباً، أود الاستفسار عن العرض: ${title}`);
-    window.open(`https://wa.me/+963981082693?text=${message}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/+963966627602?text=${message}`, '_blank', 'noopener,noreferrer');
   };
 
   return (

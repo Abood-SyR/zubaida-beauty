@@ -214,7 +214,7 @@ export default function ProductDetailPage() {
 
   const handleWhatsApp = () => {
     const text = encodeURIComponent(`مرحبا لدي سؤال حول "${productName}"`);   
-    window.open(`https://wa.me/+963981082693?text=${text}`, '_blank');   
+    window.open(`https://wa.me/+963966627602?text=${text}`, '_blank');   
   };
 
   const handleShare = async () => {

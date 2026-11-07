@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from './api_client';
-import { Product } from '../models/product';
+import { parseWholesaleProductFromJson, Product, WholesaleCatalogProduct } from '../models/product';
 
 type ProductGroup = Record<string, unknown>;
 
@@ -55,6 +55,35 @@ export class ProductService {
     } catch (e) {
       throw new Error(`فشل في جلب المنتجات: ${e}`);
     }
+  }
+
+  async getWholesaleCatalog(targetType: 'body' | 'skin' | 'hair'): Promise<WholesaleCatalogProduct[]> {
+    const pageSize = 100;
+    const products: WholesaleCatalogProduct[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const queryParams = new URLSearchParams({
+        target_type: targetType,
+        limit: String(pageSize),
+        skip: String(offset),
+      });
+      const data: unknown = await apiClient(`/products/wholesale-catalog?${queryParams.toString()}`);
+
+      if (!Array.isArray(data)) {
+        throw new Error('استجابة كتالوج أسعار الجملة غير صالحة');
+      }
+
+      const page = data
+        .filter((item): item is Record<string, unknown> => item != null && typeof item === 'object')
+        .map(parseWholesaleProductFromJson);
+      products.push(...page);
+      hasMore = data.length === pageSize;
+      offset += data.length;
+    }
+
+    return products;
   }
 
   // جلب أحدث المنتجات
