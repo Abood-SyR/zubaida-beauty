@@ -61,6 +61,7 @@ export default function NewProductsSection({
               product.thumbnailUrl &&
               product.thumbnailUrl.trim() !== '' &&
               product.thumbnailUrl.startsWith('http');
+            const isOutOfStock = (product.stockQuantity ?? 0) <= 0;
 
             return (
               <article
@@ -139,10 +140,16 @@ export default function NewProductsSection({
                     <button
                       onClick={(event) => {
                         event.stopPropagation();
+                        if (isOutOfStock) return;
                         onAddToCart?.(product);
                       }}
+                      disabled={isOutOfStock}
                       aria-label={`إضافة ${productName} إلى السلة`}
-                      className="bg-primaryRose text-white p-1.5 rounded-xl hover:bg-deepRose active:scale-95 transition shadow-sm flex items-center justify-center"
+                      className={`p-1.5 rounded-xl transition shadow-sm flex items-center justify-center ${
+                        isOutOfStock
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-primaryRose text-white hover:bg-deepRose active:scale-95'
+                      }`}
                     >
                       <svg
                         className="w-4 h-4"
